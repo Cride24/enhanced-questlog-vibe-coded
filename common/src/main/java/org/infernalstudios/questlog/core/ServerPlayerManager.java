@@ -1,5 +1,6 @@
 package org.infernalstudios.questlog.core;
 
+import com.google.gson.JsonObject;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
@@ -22,9 +23,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 public class ServerPlayerManager {
 
@@ -70,8 +74,9 @@ public class ServerPlayerManager {
      * It iterates over all quest managers and calls the save method for each one.
      */
     public void save() {
-        for (QuestManager questManager : this.questManagers.values()) {
-            this.save(questManager);
+        for (ServerPlayer player : this.server.getPlayerList().getPlayers()) {
+            QuestManager manager = getManagerIfPresent(player);
+            if (manager != null) this.save(manager);
         }
     }
 
@@ -81,10 +86,10 @@ public class ServerPlayerManager {
      *
      * @param questManager The quest manager whose data will be saved.
      */
-    public void save(QuestManager questManager) {
+    public boolean save(QuestManager questManager) {
         if (!questManager.isLoaded()) {
             Questlog.LOGGER.warn("Skipping quest save for player {} because quest data has not been loaded yet", questManager.player.getGameProfile().getName());
-            return;
+            return false;
         }
 
         Questlog.LOGGER.debug("Saving player data for {}", questManager.player.getGameProfile().getName());
@@ -106,6 +111,7 @@ public class ServerPlayerManager {
             Path targetFile = playerDataDir.resolve(uuid + ".questlog.dat");
             Path backupFile = playerDataDir.resolve(uuid + ".questlog.dat_old");
             Util.safeReplaceFile(targetFile, tempFile, backupFile);
+            return true;
         } catch (IOException e) {
             Questlog.LOGGER.error("Failed to save player data for {}", questManager.player.getGameProfile().getName(), e);
             if (tempFile != null) {
@@ -114,6 +120,7 @@ public class ServerPlayerManager {
                 } catch (IOException ignored) {
                 }
             }
+            return false;
         }
     }
 
@@ -181,8 +188,8 @@ public class ServerPlayerManager {
                 shouldSave = true;
             }
 
-            if (quest.isGlobal() && globalData.contains(quest.getId().toString())) {
-                quest.deserialize(globalData.getCompound(quest.getId().toString()));
+            if (mergeGlobalCompletion(quest, globalData)) {
+                shouldSave = true;
             }
         }
 
@@ -224,7 +231,7 @@ public class ServerPlayerManager {
         return new CompoundTag();
     }
 
-    private void saveGlobalData(CompoundTag tag) {
+    private boolean saveGlobalData(CompoundTag tag) {
         Path tempFile = null;
         try {
             Path playerDataDir = this.server.getWorldPath(LevelResource.PLAYER_DATA_DIR);
@@ -234,6 +241,7 @@ public class ServerPlayerManager {
             Path targetFile = playerDataDir.resolve("global_quests.questlog.dat");
             Path backupFile = playerDataDir.resolve("global_quests.questlog.dat_old");
             Util.safeReplaceFile(targetFile, tempFile, backupFile);
+            return true;
         } catch (IOException e) {
             Questlog.LOGGER.error("Failed to save global quest data", e);
             if (tempFile != null) {
@@ -242,6 +250,7 @@ public class ServerPlayerManager {
                 } catch (IOException ignored) {
                 }
             }
+            return false;
         }
     }
 
@@ -250,17 +259,20 @@ public class ServerPlayerManager {
         isSyncingGlobal = true;
         try {
             ResourceLocation id = sourceQuest.getId();
-            CompoundTag serialized = sourceQuest.serialize();
-
             CompoundTag globalTag = loadGlobalData();
-            globalTag.put(id.toString(), serialized);
-            saveGlobalData(globalTag);
+            CompoundTag completion = new CompoundTag();
+            completion.putBoolean("completed", true);
+            globalTag.put(id.toString(), completion);
+            if (!saveGlobalData(globalTag)) return;
 
-            for (QuestManager manager : this.questManagers.values()) {
+            for (ServerPlayer player : this.server.getPlayerList().getPlayers()) {
+                QuestManager manager = getManagerIfPresent(player);
+                if (manager == null) continue;
                 Quest q = manager.getQuest(id);
-                if (q != null) {
-                    q.deserialize(serialized);
+                if (q != null && manager.isLoaded() && !q.ignoresGlobalCompletion()) {
+                    q.grantGlobalCompletion();
                     manager.sync(id);
+                    this.save(manager);
                 }
             }
         } finally {
@@ -269,21 +281,111 @@ public class ServerPlayerManager {
     }
 
     public void resetGlobalQuest(ResourceLocation id) {
-        if (isSyncingGlobal) return;
-        isSyncingGlobal = true;
+        resetQuestForAll(id);
+    }
+
+    public boolean resetQuestForPlayer(UUID playerId, ResourceLocation questId) {
+        return resetQuestForPlayer(playerId, questId, true);
+    }
+
+    private boolean resetQuestForPlayer(UUID playerId, ResourceLocation questId, boolean suppressGlobal) {
+        ServerPlayer player = this.server.getPlayerList().getPlayer(playerId);
+        QuestManager manager = player == null ? null : getManagerByPlayer(player);
+        if (manager != null && manager.isLoaded()) {
+            Quest quest = manager.getQuest(questId);
+            if (quest == null) return false;
+            quest.resetProgress(suppressGlobal && quest.isGlobal());
+            if (!this.save(manager)) return false;
+            this.syncPlayer(manager);
+            return true;
+        }
+
+        Path dir = this.server.getWorldPath(LevelResource.PLAYER_DATA_DIR);
+        CompoundTag data = readPlayerData(dir, playerId);
+        if (data == null) return false;
+        JsonObject definition = DefinitionUtil.hasCachedQuest(questId) ? DefinitionUtil.getCachedQuest(questId) : null;
+        boolean global = definition != null && definition.has("global") && definition.get("global").getAsBoolean();
+        resetSavedQuest(data, questId, suppressGlobal && global);
+        return writePlayerData(dir, playerId, data);
+    }
+
+    static void resetSavedQuest(CompoundTag data, ResourceLocation questId, boolean ignoreGlobalCompletion) {
+        CompoundTag questData = new CompoundTag();
+        questData.putBoolean("ignore_global_completion", ignoreGlobalCompletion);
+        data.put(questId.toString(), questData);
+    }
+
+    static boolean mergeGlobalCompletion(Quest quest, CompoundTag globalData) {
+        if (!quest.isGlobal() || quest.ignoresGlobalCompletion() || quest.hasSentCompletion
+                || !globalData.getCompound(quest.getId().toString()).getBoolean("completed")) return false;
+        quest.grantGlobalCompletion();
+        return true;
+    }
+
+    public int resetQuestForAll(ResourceLocation questId) {
+        Path playerDataDir = this.server.getWorldPath(LevelResource.PLAYER_DATA_DIR);
+        int count = 0;
         try {
-            CompoundTag globalTag = loadGlobalData();
-            for (QuestManager manager : this.questManagers.values()) {
-                Quest q = manager.getQuest(id);
-                if (q != null) {
-                    q.resetProgress();
-                    globalTag.put(id.toString(), q.serialize());
+            Files.createDirectories(playerDataDir);
+            Set<UUID> playerIds = new HashSet<>();
+            try (Stream<Path> files = Files.list(playerDataDir)) {
+                for (Path path : files.filter(p -> p.getFileName().toString().endsWith(".questlog.dat")
+                        || p.getFileName().toString().endsWith(".questlog.dat_old")).toList()) {
+                    String name = path.getFileName().toString();
+                    try {
+                        String suffix = name.endsWith(".questlog.dat_old") ? ".questlog.dat_old" : ".questlog.dat";
+                        playerIds.add(UUID.fromString(name.substring(0, name.length() - suffix.length())));
+                    } catch (IllegalArgumentException ignored) {
+                        // The global file and temporary files are not player saves.
+                    }
                 }
             }
-            saveGlobalData(globalTag);
-            this.save();
-        } finally {
-            isSyncingGlobal = false;
+            for (ServerPlayer player : this.server.getPlayerList().getPlayers()) playerIds.add(player.getUUID());
+            for (UUID playerId : playerIds) {
+                if (!resetQuestForPlayer(playerId, questId, false)) return -1;
+                count++;
+            }
+        } catch (IOException e) {
+            Questlog.LOGGER.error("Failed to reset quest {} for offline players", questId, e);
+            return -1;
+        }
+        CompoundTag globalTag = loadGlobalData();
+        if (globalTag.contains(questId.toString())) {
+            globalTag.remove(questId.toString());
+            if (!saveGlobalData(globalTag)) return -1;
+        }
+        return count;
+    }
+
+    static CompoundTag readPlayerData(Path playerDataDir, UUID playerId) {
+        boolean found = false;
+        for (String suffix : new String[]{".questlog.dat", ".questlog.dat_old"}) {
+            Path path = playerDataDir.resolve(playerId + suffix);
+            if (!Files.exists(path)) continue;
+            found = true;
+            try {
+                return NbtIo.readCompressed(path, NbtAccounter.unlimitedHeap());
+            } catch (IOException e) {
+                Questlog.LOGGER.error("Failed to read quest data for {} from {}", playerId, path, e);
+                if (suffix.equals(".questlog.dat")) return null;
+            }
+        }
+        return found ? null : new CompoundTag();
+    }
+
+    static boolean writePlayerData(Path dir, UUID playerId, CompoundTag data) {
+        Path tempFile = null;
+        try {
+            Files.createDirectories(dir);
+            tempFile = Files.createTempFile(dir, playerId + "-", ".questlog.dat");
+            NbtIo.writeCompressed(data, tempFile);
+            Util.safeReplaceFile(dir.resolve(playerId + ".questlog.dat"), tempFile,
+                    dir.resolve(playerId + ".questlog.dat_old"));
+            return true;
+        } catch (IOException e) {
+            Questlog.LOGGER.error("Failed to save quest data for {}", playerId, e);
+            if (tempFile != null) try { Files.deleteIfExists(tempFile); } catch (IOException ignored) { }
+            return false;
         }
     }
 

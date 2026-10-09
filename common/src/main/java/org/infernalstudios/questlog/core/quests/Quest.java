@@ -36,6 +36,7 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
     private boolean functional = true;
     private JsonObject definition;
     private CompoundTag suspendedProgress;
+    private boolean ignoreGlobalCompletion;
 
     public Quest(
             QuestDisplayData display,
@@ -147,6 +148,12 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
     }
 
     public void resetProgress() {
+        this.resetProgress(false);
+    }
+
+    public void resetProgress(boolean ignoreGlobalCompletion) {
+        this.ignoreGlobalCompletion = ignoreGlobalCompletion;
+        this.suspendedProgress = null;
         this.prerequisites.forEach(trigger -> trigger.forceSetUnits(0));
         this.objectives.forEach(obj -> obj.forceSetUnits(0));
         this.failureConditions.forEach(obj -> obj.forceSetUnits(0));
@@ -162,6 +169,7 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
     }
 
     public boolean isTriggered() {
+        if (this.hasSentCompletion) return true;
         for (Objective req : this.prerequisites) {
             if (!req.isCompleted()) {
                 return false;
@@ -171,10 +179,12 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
     }
 
     public boolean isFailed() {
+        if (this.hasSentCompletion) return false;
         return !this.failureConditions.isEmpty() && this.failureConditions.stream().anyMatch(Objective::isCompleted);
     }
 
     public boolean isCompleted() {
+        if (this.hasSentCompletion) return true;
         if (this.isFailed()) return false;
 
         for (Objective objective : this.objectives) {
@@ -194,6 +204,14 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
         return true;
     }
 
+    public boolean ignoresGlobalCompletion() {
+        return this.ignoreGlobalCompletion;
+    }
+
+    public void grantGlobalCompletion() {
+        this.hasSentCompletion = true;
+    }
+
     public void markForUpdate() {
         this.manager.sync(this.id);
     }
@@ -202,6 +220,7 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
     public void writeInitialData(CompoundTag data) {
         data.putBoolean("completed", this.hasSentCompletion);
         data.putBoolean("triggered", this.hasSentTrigger);
+        data.putBoolean("ignore_global_completion", this.ignoreGlobalCompletion);
 
         data.put(
                 "prerequisites",
@@ -248,6 +267,7 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
         }
         this.hasSentCompletion = data.getBoolean("completed");
         this.hasSentTrigger = data.getBoolean("triggered");
+        this.ignoreGlobalCompletion = data.getBoolean("ignore_global_completion");
 
         if (this.prerequisites.isEmpty()) {
             this.hasSentTrigger = true;
@@ -281,6 +301,7 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
         CompoundTag tag = new CompoundTag();
         tag.putBoolean("completed", this.hasSentCompletion);
         tag.putBoolean("triggered", this.hasSentTrigger);
+        tag.putBoolean("ignore_global_completion", this.ignoreGlobalCompletion);
         tag.put("prerequisites", Util.toNbtList(this.prerequisites, Objective::serialize));
         tag.put("objectives", Util.toNbtList(this.objectives, Objective::serialize));
         tag.put("failures", Util.toNbtList(this.failureConditions, Objective::serialize));
@@ -324,7 +345,18 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
                 }
                 restored.put(key, matched);
                 if (key.equals("prerequisites")) restored.putBoolean("triggered", false);
-                if (key.equals("objectives") || key.equals("failures")) restored.putBoolean("completed", false);
+                if (key.equals("rewards")) {
+                    boolean allClaimed = !tags.isEmpty();
+                    for (int i = 0; i < tags.size(); i++) allClaimed &= tags.getCompound(i).getBoolean("rewarded");
+                    if (allClaimed) {
+                        for (int i = 0; i < matched.size(); i++) matched.getCompound(i).putBoolean("rewarded", true);
+                    } else {
+                        for (int i = 0; i < Math.min(tags.size(), matched.size()); i++) {
+                            if (matched.getCompound(i).isEmpty() && tags.getCompound(i).getBoolean("rewarded"))
+                                matched.getCompound(i).putBoolean("rewarded", true);
+                        }
+                    }
+                }
             }
             return restored;
         } catch (RuntimeException ignored) { return saved; }

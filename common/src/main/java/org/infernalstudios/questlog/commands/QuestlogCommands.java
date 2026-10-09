@@ -6,6 +6,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -20,7 +21,6 @@ import org.infernalstudios.questlog.core.DefinitionUtil;
 import org.infernalstudios.questlog.core.QuestManager;
 import org.infernalstudios.questlog.core.ServerPlayerManager;
 import org.infernalstudios.questlog.core.quests.Quest;
-import org.infernalstudios.questlog.core.quests.rewards.Reward;
 import org.infernalstudios.questlog.network.packet.QuestEditModePacket;
 import org.infernalstudios.questlog.network.packet.QuestOpenPacket;
 import org.infernalstudios.questlog.platform.Services;
@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 public class QuestlogCommands {
 
@@ -91,6 +92,11 @@ public class QuestlogCommands {
                                                 .then(Commands.argument("players", EntityArgument.players())
                                                         .executes(ctx -> modifyProgress(ctx, ResourceLocationArgument.getId(ctx, "target").toString(), false, EntityArgument.getPlayers(ctx, "players")))
                                                 )
+                                                .then(Commands.literal("uuid")
+                                                        .then(Commands.argument("player_uuid", StringArgumentType.word())
+                                                                .executes(ctx -> resetOfflineProgress(ctx, ResourceLocationArgument.getId(ctx, "target"), StringArgumentType.getString(ctx, "player_uuid")))))
+                                                .then(Commands.literal("all")
+                                                        .executes(ctx -> resetTargetForAll(ctx, ResourceLocationArgument.getId(ctx, "target"))))
                                         )
                                         .then(Commands.literal("all")
                                                 .executes(ctx -> resetAllProgress(ctx, Collections.singletonList(ctx.getSource().getPlayerOrException())))
@@ -173,12 +179,7 @@ public class QuestlogCommands {
             manager.createAllQuests();
 
             for (Quest quest : manager.getAllQuests()) {
-                quest.prerequisites.forEach(trigger -> trigger.forceSetUnits(0));
-                quest.objectives.forEach(obj -> obj.forceSetUnits(0));
-                quest.failureConditions.forEach(obj -> obj.forceSetUnits(0));
-                quest.rewards.forEach(Reward::revokeReward);
-                quest.hasSentTrigger = quest.prerequisites.isEmpty();
-                quest.hasSentCompletion = false;
+                quest.resetProgress(quest.isGlobal());
             }
 
             ServerPlayerManager.INSTANCE.save(manager);
@@ -261,12 +262,7 @@ public class QuestlogCommands {
                     quest.objectives.forEach(obj -> obj.forceSetUnits(obj.getRequiredAmount()));
                     quest.failureConditions.forEach(obj -> obj.forceSetUnits(0)); // clear fails if force completed
                 } else {
-                    quest.prerequisites.forEach(trigger -> trigger.forceSetUnits(0));
-                    quest.objectives.forEach(obj -> obj.forceSetUnits(0));
-                    quest.failureConditions.forEach(obj -> obj.forceSetUnits(0));
-                    quest.rewards.forEach(Reward::revokeReward);
-                    quest.hasSentTrigger = quest.prerequisites.isEmpty();
-                    quest.hasSentCompletion = false;
+                    quest.resetProgress(quest.isGlobal());
                 }
             }
             ServerPlayerManager.INSTANCE.save(manager);
@@ -285,16 +281,45 @@ public class QuestlogCommands {
         return modified;
     }
 
+    private static int resetOfflineProgress(CommandContext<CommandSourceStack> ctx, ResourceLocation questId, String value) {
+        if (!DefinitionUtil.hasCachedQuest(questId)) {
+            ctx.getSource().sendFailure(Component.literal("Quest not found: " + questId));
+            return 0;
+        }
+        UUID playerId;
+        try {
+            playerId = UUID.fromString(value);
+        } catch (IllegalArgumentException e) {
+            ctx.getSource().sendFailure(Component.literal("Invalid player UUID: " + value));
+            return 0;
+        }
+        if (!ServerPlayerManager.INSTANCE.resetQuestForPlayer(playerId, questId)) {
+            ctx.getSource().sendFailure(Component.literal("Could not reset quest data for " + playerId));
+            return 0;
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal("Reset " + questId + " for " + playerId), true);
+        return 1;
+    }
+
+    private static int resetTargetForAll(CommandContext<CommandSourceStack> ctx, ResourceLocation questId) {
+        if (!DefinitionUtil.hasCachedQuest(questId)) {
+            ctx.getSource().sendFailure(Component.literal("Quest not found: " + questId));
+            return 0;
+        }
+        int count = ServerPlayerManager.INSTANCE.resetQuestForAll(questId);
+        if (count < 0) {
+            ctx.getSource().sendFailure(Component.literal("Could not reset all saved players for " + questId));
+            return 0;
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal("Reset " + questId + " for " + count + " saved player(s)"), true);
+        return count;
+    }
+
     private static int resetAllProgress(CommandContext<CommandSourceStack> ctx, Collection<ServerPlayer> players) {
         for (ServerPlayer player : players) {
             QuestManager manager = ServerPlayerManager.INSTANCE.getManagerByPlayer(player);
             for (Quest quest : manager.getAllQuests()) {
-                quest.prerequisites.forEach(trigger -> trigger.forceSetUnits(0));
-                quest.objectives.forEach(obj -> obj.forceSetUnits(0));
-                quest.failureConditions.forEach(obj -> obj.forceSetUnits(0));
-                quest.rewards.forEach(Reward::revokeReward);
-                quest.hasSentTrigger = quest.prerequisites.isEmpty();
-                quest.hasSentCompletion = false;
+                quest.resetProgress(quest.isGlobal());
             }
             ServerPlayerManager.INSTANCE.save(manager);
             ServerPlayerManager.INSTANCE.syncPlayer(manager);
