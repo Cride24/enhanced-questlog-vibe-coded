@@ -30,10 +30,17 @@ public class ClientPacketHandler {
     private static final List<QuestDefinitionPacket> DEFERRED_DEFS = new CopyOnWriteArrayList<>();
     private static QuestSyncPacket DEFERRED_SYNC_PACKET = null;
     private static CompoundTag groupState = new CompoundTag();
+    private static CompoundTag shareCandidates = new CompoundTag();
 
     public static CompoundTag groupState() { return groupState; }
+    public static CompoundTag shareCandidates() { return shareCandidates; }
 
-    public static void clearSession() { DEFERRED_DEFS.clear(); DEFERRED_SYNC_PACKET = null; groupState = new CompoundTag(); }
+    public static void clearSession() { DEFERRED_DEFS.clear(); DEFERRED_SYNC_PACKET = null; groupState = new CompoundTag(); shareCandidates = new CompoundTag(); }
+
+    public static void handle(QuestShareCandidatesPacket packet, IPacketContext ctx) {
+        shareCandidates = packet.data();
+        if (Minecraft.getInstance().screen instanceof GroupScreen screen) screen.refreshFromServer();
+    }
 
     public static void handle(GroupStatePacket packet, IPacketContext ctx) {
         groupState = packet.data();
@@ -92,6 +99,12 @@ public class ClientPacketHandler {
             }
             manager.addQuest(quest);
             org.infernalstudios.questlog.client.gui.TrackedQuestsOverlay.invalidate();
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.screen instanceof QuestDetails details && details.quest.getId().equals(packet.id())) {
+                if (quest.isVisibleToPlayer() || QuestlogClient.isEditModeActive || quest.isOffered())
+                    mc.setScreen(details.refreshed(quest));
+                else mc.setScreen(details.getPreviousScreen());
+            }
         } catch (Throwable e) {
             Questlog.LOGGER.error("Failed to handle QuestDefinitionPacket", e);
         }
@@ -109,6 +122,9 @@ public class ClientPacketHandler {
         QuestManager manager = QuestlogClient.getLocal();
         manager.removeQuest(packet.id());
         org.infernalstudios.questlog.client.gui.TrackedQuestsOverlay.invalidate();
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen instanceof QuestDetails details && details.quest.getId().equals(packet.id()))
+            mc.setScreen(details.getPreviousScreen());
     }
 
     public static void handle(QuestTriggeredPacket packet, IPacketContext ctx) {
@@ -124,8 +140,8 @@ public class ClientPacketHandler {
             ResourceLocation id = ResourceLocation.tryParse(target);
             if (id != null) {
                 Quest quest = QuestlogClient.getLocal().getQuest(id);
-                if (quest != null) {
-                    mc.setScreen(new QuestDetails(mc.screen, quest));
+                if (quest != null && (packet.proposal() ? quest.isOffered() : quest.isVisibleToPlayer() || QuestlogClient.isEditModeActive)) {
+                    mc.setScreen(packet.proposal() ? QuestDetails.proposal(mc.screen, quest) : new QuestDetails(mc.screen, quest));
                     return;
                 }
             }

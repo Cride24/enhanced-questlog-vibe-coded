@@ -372,15 +372,9 @@ public final class AdventureGroups {
         }
         data.put("groups", list);
         if (own != null && own.leader.equals(id)) {
-            List<ServerPlayer> candidates = new ArrayList<>(server.getPlayerList().getPlayers());
-            String query = search.trim().toLowerCase(Locale.ROOT);
-            candidates.removeIf(candidate -> candidate.getUUID().equals(id) || membership(candidate.getUUID()) != null || !candidate.getGameProfile().getName().toLowerCase(Locale.ROOT).contains(query));
-            if (query.isEmpty()) candidates.removeIf(candidate -> candidate.level().dimension() != viewer.level().dimension());
-            candidates.sort(query.isEmpty()
-                    ? Comparator.comparingDouble(candidate -> candidate.distanceToSqr(viewer))
-                    : Comparator.comparing(candidate -> candidate.getGameProfile().getName().toLowerCase(Locale.ROOT)));
+            List<ServerPlayer> candidates = playerCandidates(viewer, search, true);
             ListTag players = new ListTag();
-            for (ServerPlayer candidate : candidates.stream().limit(10).toList()) {
+            for (ServerPlayer candidate : candidates) {
                 CompoundTag row = new CompoundTag(); row.putString("id", candidate.getUUID().toString());
                 row.putString("name", candidate.getGameProfile().getName()); players.add(row);
             }
@@ -390,4 +384,20 @@ public final class AdventureGroups {
     }
 
     static boolean canViewApplicants(Group own, Group viewed) { return own != null && own == viewed; }
+
+    public List<ServerPlayer> playerCandidates(ServerPlayer viewer, String search, boolean invitation) {
+        String query = search.trim().toLowerCase(Locale.ROOT);
+        Group own = membership(viewer.getUUID());
+        List<ServerPlayer> candidates = new ArrayList<>(server.getPlayerList().getPlayers());
+        candidates.removeIf(candidate -> candidate.getUUID().equals(viewer.getUUID())
+                || invitation && membership(candidate.getUUID()) != null
+                || !candidate.getGameProfile().getName().toLowerCase(Locale.ROOT).contains(query)
+                || query.isEmpty() && candidate.level().dimension() != viewer.level().dimension()
+                   && (invitation || own == null || own != membership(candidate.getUUID())));
+        candidates.sort(query.isEmpty()
+                ? Comparator.<ServerPlayer>comparingInt(candidate -> !invitation && own != null && own == membership(candidate.getUUID()) ? 0 : 1)
+                    .thenComparingDouble(candidate -> candidate.level().dimension() == viewer.level().dimension() ? candidate.distanceToSqr(viewer) : Double.MAX_VALUE)
+                : Comparator.comparing(candidate -> candidate.getGameProfile().getName().toLowerCase(Locale.ROOT)));
+        return candidates.stream().limit(10).toList();
+    }
 }

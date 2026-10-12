@@ -8,6 +8,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import org.infernalstudios.questlog.Questlog;
 import org.infernalstudios.questlog.core.QuestManager;
+import org.infernalstudios.questlog.core.DefinitionUtil;
 import org.infernalstudios.questlog.core.quests.display.QuestDisplayData;
 import org.infernalstudios.questlog.core.quests.display.WithDisplayData;
 import org.infernalstudios.questlog.core.quests.objectives.Objective;
@@ -18,6 +19,10 @@ import org.infernalstudios.questlog.util.Util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 
 public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
 
@@ -32,12 +37,17 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
     public boolean hasSentTrigger = false;
     private boolean repeatable = false;
     private boolean global = false;
+    private boolean shareable = false;
     private boolean active = true;
     private boolean functional = true;
     private JsonObject definition;
+    private String definitionHash;
     private CompoundTag suspendedProgress;
     private boolean ignoreGlobalCompletion;
     private boolean inheritedGlobalCompletion;
+    private boolean sharedAccess;
+    private String offeredBy = "";
+    private String offerVersion = "";
 
     public Quest(
             QuestDisplayData display,
@@ -125,9 +135,11 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
 
         Quest quest = new Quest(display, prerequisites, objectives, failureConditions, rewards, id, manager, repeatable, global);
         quest.active = JsonUtils.getOrDefault(definition, "active", true);
+        quest.shareable = JsonUtils.getOrDefault(definition, "shareable", false);
         quest.functional = !definition.has("_functional") || !definition.get("_functional").isJsonPrimitive() || !definition.getAsJsonPrimitive("_functional").isBoolean() || definition.get("_functional").getAsBoolean();
         if (!quest.functional) quest.active = false;
         quest.definition = definition.deepCopy();
+        quest.definitionHash = fingerprint(quest.definition);
         return quest;
     }
 
@@ -146,6 +158,45 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
 
     public boolean isGlobal() {
         return this.global;
+    }
+
+    public boolean isShareable() { return this.shareable; }
+    public boolean hasSharedAccess() { return this.sharedAccess; }
+    public boolean isOffered() { return this.active && this.functional && !this.sharedAccess && !this.offeredBy.isEmpty()
+            && this.shareable && this.offerVersion.equals(this.definitionHash); }
+    private static String fingerprint(JsonObject definition) {
+        JsonObject activeDefinition = definition.deepCopy();
+        activeDefinition.remove("_functional");
+        activeDefinition.remove("_validation_error");
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(activeDefinition.toString().getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException(impossible);
+        }
+    }
+    public String offeredBy() { return this.offeredBy; }
+    public boolean isVisibleToPlayer() {
+        if (!this.active) return false;
+        if (this.sharedAccess) return true;
+        String chapter = this.display.getChapter();
+        ResourceLocation chapterId = ResourceLocation.tryParse(chapter.contains(":") ? chapter : Questlog.MODID + ":" + chapter);
+        JsonObject chapterDefinition = chapterId == null ? null : DefinitionUtil.getCachedChapter(chapterId);
+        return this.isTriggered() && !this.display.isHidden()
+                && (chapterDefinition == null || !JsonUtils.getOrDefault(chapterDefinition, "hidden", false));
+    }
+    public boolean offer(String sender) {
+        if (!this.active || !this.functional || !this.shareable || this.sharedAccess || this.isOffered()) return false;
+        this.offeredBy = sender;
+        this.offerVersion = this.definitionHash;
+        return true;
+    }
+    public boolean acceptOffer() {
+        if (!this.isOffered() || this.isCompleted() && !this.repeatable) return false;
+        this.sharedAccess = true;
+        this.offeredBy = "";
+        this.offerVersion = "";
+        return true;
     }
 
     public void resetProgress() {
@@ -171,6 +222,7 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
     }
 
     public boolean isTriggered() {
+        if (this.sharedAccess) return true;
         if (this.hasSentCompletion) return true;
         for (Objective req : this.prerequisites) {
             if (!req.isCompleted()) {
@@ -187,6 +239,7 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
 
     public boolean isCompleted() {
         if (this.hasSentCompletion) return true;
+        if (!this.isTriggered()) return false;
         if (this.isFailed()) return false;
 
         for (Objective objective : this.objectives) {
@@ -233,6 +286,9 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
         data.putBoolean("triggered", this.hasSentTrigger);
         data.putBoolean("ignore_global_completion", this.ignoreGlobalCompletion);
         data.putBoolean("global_completion_inherited", this.inheritedGlobalCompletion);
+        data.putBoolean("shared_access", this.sharedAccess);
+        data.putString("offered_by", this.offeredBy);
+        data.putString("offer_version", this.offerVersion);
 
         data.put(
                 "prerequisites",
@@ -281,6 +337,9 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
         this.hasSentTrigger = data.getBoolean("triggered");
         this.ignoreGlobalCompletion = data.getBoolean("ignore_global_completion");
         this.inheritedGlobalCompletion = data.getBoolean("global_completion_inherited");
+        this.sharedAccess = data.getBoolean("shared_access");
+        this.offeredBy = data.getString("offered_by");
+        this.offerVersion = data.getString("offer_version");
 
         if (this.prerequisites.isEmpty()) {
             this.hasSentTrigger = true;
@@ -316,6 +375,9 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
         tag.putBoolean("triggered", this.hasSentTrigger);
         tag.putBoolean("ignore_global_completion", this.ignoreGlobalCompletion);
         tag.putBoolean("global_completion_inherited", this.inheritedGlobalCompletion);
+        tag.putBoolean("shared_access", this.sharedAccess);
+        tag.putString("offered_by", this.offeredBy);
+        tag.putString("offer_version", this.offerVersion);
         tag.put("prerequisites", Util.toNbtList(this.prerequisites, Objective::serialize));
         tag.put("objectives", Util.toNbtList(this.objectives, Objective::serialize));
         tag.put("failures", Util.toNbtList(this.failureConditions, Objective::serialize));

@@ -105,12 +105,7 @@ public class QuestlogScreen extends Screen {
         this.hideCompleted = Questlog.getConfig().preferences.hideCompleted;
         this.descriptionsCondensed = Questlog.getConfig().preferences.descriptionsCondensed;
 
-        List<ResourceLocation> chapterKeys = new ArrayList<>();
-        for (Map.Entry<ResourceLocation, ChapterInfo> entry : this.availableChapters.entrySet()) {
-            if (QuestlogClient.isEditModeActive || !entry.getValue().hidden) {
-                chapterKeys.add(entry.getKey());
-            }
-        }
+        List<ResourceLocation> chapterKeys = this.visibleChapterKeys();
 
         ResourceLocation defaultChapter = ResourceLocation.fromNamespaceAndPath(Questlog.MODID, "main");
         if (this.currentChapter == null || !chapterKeys.contains(this.currentChapter)) {
@@ -138,6 +133,22 @@ public class QuestlogScreen extends Screen {
         this.ensureTabVisible(chapterKeys, this.currentChapter);
 
         this.refreshList();
+    }
+
+    private List<ResourceLocation> visibleChapterKeys() {
+        List<ResourceLocation> keys = new ArrayList<>();
+        for (Map.Entry<ResourceLocation, ChapterInfo> entry : this.availableChapters.entrySet()) {
+            ResourceLocation chapter = entry.getKey();
+            if (QuestlogClient.isEditModeActive || this.manager.getAllQuests().stream().anyMatch(quest -> {
+                String value = quest.getDisplay().getChapter();
+                ResourceLocation id = ResourceLocation.tryParse(value.contains(":") ? value : Questlog.MODID + ":" + value);
+                return chapter.equals(id) && quest.isVisibleToPlayer()
+                        && (!this.hideCompleted || !quest.isCompleted())
+                        && (!quest.getDisplay().shouldHideWhenCompleted() || !quest.isCompleted() || quest.hasPendingRewards())
+                        && (!entry.getValue().hidden || quest.hasSharedAccess());
+            })) keys.add(chapter);
+        }
+        return keys;
     }
 
     private void refreshList() {
@@ -387,12 +398,12 @@ public class QuestlogScreen extends Screen {
     }
 
     private void buildTabs() {
-        List<ResourceLocation> chapterKeys = new ArrayList<>();
-        for (Map.Entry<ResourceLocation, ChapterInfo> entry : this.availableChapters.entrySet()) {
-            if (QuestlogClient.isEditModeActive || !entry.getValue().hidden) {
-                chapterKeys.add(entry.getKey());
-            }
+        List<ResourceLocation> chapterKeys = this.visibleChapterKeys();
+        if (!chapterKeys.contains(this.currentChapter) && !chapterKeys.isEmpty()) {
+            ResourceLocation main = ResourceLocation.fromNamespaceAndPath(Questlog.MODID, "main");
+            this.currentChapter = chapterKeys.contains(main) ? main : chapterKeys.getFirst();
         }
+        this.tabOffset = Math.min(this.tabOffset, Math.max(0, chapterKeys.size() - MAX_TABS));
         int listWidth = 245;
         int listHeight = 136;
         int listX = (this.width - listWidth) / 2 + 1 + Questlog.getConfig().gui.mainPanelX;
@@ -436,7 +447,7 @@ public class QuestlogScreen extends Screen {
         int y = (this.height - height) / 2 + 1 + Questlog.getConfig().gui.mainPanelY;
 
         List<Quest> quests = this.manager.getAllQuests().stream()
-                .filter(quest -> QuestlogClient.isEditModeActive || (quest.isActive() && quest.isTriggered() && !quest.getDisplay().isHidden()))
+                .filter(quest -> QuestlogClient.isEditModeActive || quest.isVisibleToPlayer())
                 .filter(quest -> !this.hideCompleted || !quest.isCompleted())
                 .filter(quest -> QuestlogClient.isEditModeActive
                         || !quest.getDisplay().shouldHideWhenCompleted()
@@ -449,7 +460,7 @@ public class QuestlogScreen extends Screen {
                             : ResourceLocation.fromNamespaceAndPath(Questlog.MODID, chapterStr);
 
                     ChapterInfo questChapterInfo = this.availableChapters.get(questChapter);
-                    boolean shouldShowChapter = questChapterInfo != null && (QuestlogClient.isEditModeActive || !questChapterInfo.hidden);
+                    boolean shouldShowChapter = questChapterInfo != null && (QuestlogClient.isEditModeActive || !questChapterInfo.hidden || quest.hasSharedAccess());
 
                     return Objects.requireNonNull(questChapter).equals(this.currentChapter) ||
                             (this.currentChapter.getPath().equals("main") && quest.getDisplay().shouldIncludeInMain() && shouldShowChapter);

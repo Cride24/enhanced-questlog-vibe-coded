@@ -47,6 +47,7 @@ public class QuestDetails extends Screen implements NarrationSupplier {
     private static final int MAX_TITLE_LINES = 2;
 
     private final boolean detailsPage;
+    private final boolean proposal;
     private boolean showInfo;
 
     public final Quest quest;
@@ -67,6 +68,7 @@ public class QuestDetails extends Screen implements NarrationSupplier {
     private QuestlogButton rewardButton;
     @Nullable
     private QuestlogButton objectivesButton;
+    @Nullable private QuestlogButton shareButton;
     @Nullable
     private ScrollableComponent description;
     @Nullable
@@ -75,15 +77,21 @@ public class QuestDetails extends Screen implements NarrationSupplier {
     private boolean changedCursor = false;
 
     public QuestDetails(@Nullable Screen previousScreen, Quest quest) {
-        this(previousScreen, quest, quest.getDisplay().hasDetails() && quest.getDisplay().isDetailsOpenByDefault());
+        this(previousScreen, quest, quest.getDisplay().hasDetails() && quest.getDisplay().isDetailsOpenByDefault(), false);
     }
 
-    public static QuestDetails overview(@Nullable Screen previousScreen, Quest quest) { return new QuestDetails(previousScreen, quest, false); }
+    public static QuestDetails overview(@Nullable Screen previousScreen, Quest quest) { return new QuestDetails(previousScreen, quest, false, false); }
+    public static QuestDetails proposal(@Nullable Screen previousScreen, Quest quest) { return new QuestDetails(previousScreen, quest, false, true); }
 
     private QuestDetails(@Nullable Screen previousScreen, Quest quest, boolean detailsPage) {
+        this(previousScreen, quest, detailsPage, false);
+    }
+
+    private QuestDetails(@Nullable Screen previousScreen, Quest quest, boolean detailsPage, boolean proposal) {
         super(quest.getDisplay().getTitle());
         this.quest = quest;
         this.detailsPage = detailsPage;
+        this.proposal = proposal;
         this.previousScreen = detailsPage && !(previousScreen instanceof QuestDetails overview
                 && overview.quest == quest && !overview.detailsPage)
                 ? new QuestDetails(previousScreen, quest, false) : previousScreen;
@@ -95,7 +103,7 @@ public class QuestDetails extends Screen implements NarrationSupplier {
                 && overview.quest.getId().equals(updatedQuest.getId())) {
             previous = new QuestDetails(overview.getPreviousScreen(), updatedQuest, false);
         }
-        return new QuestDetails(previous, updatedQuest, this.detailsPage);
+        return new QuestDetails(previous, updatedQuest, this.detailsPage, this.proposal && updatedQuest.isOffered());
     }
 
     @Nullable
@@ -168,16 +176,32 @@ public class QuestDetails extends Screen implements NarrationSupplier {
     private void setupButtons() {
         int height = this.getDisplay().getPanelHeight();
 
-        if (!this.detailsPage) {
+        if (!this.detailsPage && !this.proposal) {
             this.followButton = new QuestlogButton(this.panel1X, Math.max(0,this.panel1Y-22),
                     this.getPalette().textColor(), this.getPalette().hoveredTextColor(),
                     Component.translatable(org.infernalstudios.questlog.client.gui.TrackedQuestsOverlay.follows(this.quest.getId()) ? "questlog.tracking.unfollow" : "questlog.tracking.follow"),
                     () -> org.infernalstudios.questlog.client.gui.TrackedQuestsOverlay.toggle(this.quest.getId()),this.getGuiSet());
             this.followButton.active = org.infernalstudios.questlog.client.gui.TrackedQuestsOverlay.follows(this.quest.getId())
-                    || this.quest.isActive() && this.quest.isTriggered() && (!this.quest.isCompleted() || this.quest.hasPendingRewards());
+                    || this.quest.isVisibleToPlayer() && (!this.quest.isCompleted() || this.quest.hasPendingRewards());
             this.addRenderableWidget(this.followButton);
         }
         int buttonY = this.panel1Y + height + 2;
+
+        if (!this.detailsPage && (this.proposal || this.quest.isShareable() && this.quest.isVisibleToPlayer())) {
+            this.shareButton = new QuestlogButton(this.panel1X + 12, buttonY,
+                    this.getPalette().textColor(), this.getPalette().hoveredTextColor(),
+                    Component.translatable(this.proposal ? "questlog.share.accept" : "questlog.share.share"),
+                    () -> {
+                        if (this.proposal) {
+                            Services.PLATFORM.sendPacketToServer(new org.infernalstudios.questlog.network.packet.QuestShareActionPacket(
+                                    org.infernalstudios.questlog.network.packet.QuestShareActionPacket.ACCEPT, this.quest.getId(), ""));
+                        } else if (this.minecraft != null) {
+                            this.minecraft.setScreen(new GroupScreen(this, this.quest.getId()));
+                        }
+                    }, this.getGuiSet());
+            this.addRenderableWidget(this.shareButton);
+            if (this.proposal && this.quest.isCompleted() && !this.quest.isRepeatable()) this.shareButton.active = false;
+        }
 
         this.backButton = new QuestlogButton(
                 0, buttonY,
@@ -188,7 +212,7 @@ public class QuestDetails extends Screen implements NarrationSupplier {
                 this.getGuiSet()
         );
 
-        if (this.shouldShowRewardButton()) {
+        if (!this.proposal && this.shouldShowRewardButton()) {
             this.rewardButton = new QuestlogButton(
                     0, this.panel2Y + height + 2,
                     this.getPalette().textColor(),
@@ -202,7 +226,7 @@ public class QuestDetails extends Screen implements NarrationSupplier {
             this.rewardButton = null;
         }
 
-        if (!this.detailsPage && this.getDisplay().hasDetails() && !this.getDisplay().isDetailsButtonDisabled()) {
+        if (!this.detailsPage && !this.proposal && this.getDisplay().hasDetails() && !this.getDisplay().isDetailsButtonDisabled()) {
             this.objectivesButton = new QuestlogButton(
                     0, buttonY,
                     this.getPalette().textColor(),
@@ -241,9 +265,11 @@ public class QuestDetails extends Screen implements NarrationSupplier {
             return;
         }
 
-        if (this.quest.isActive() && this.quest.isCompleted() && this.quest.isRewarded() && this.quest.isRepeatable()) {
+        if (this.proposal) backText = Component.translatable("gui.back");
+
+        if (!this.proposal && this.quest.isActive() && this.quest.isCompleted() && this.quest.isRewarded() && this.quest.isRepeatable()) {
             backText = Component.translatable("questlog.reward.reset");
-        } else if (this.quest.isActive() && this.needsRead()) {
+        } else if (!this.proposal && this.quest.isActive() && this.needsRead()) {
             backText = Component.translatable("questlog.button.read");
         }
 
@@ -259,7 +285,7 @@ public class QuestDetails extends Screen implements NarrationSupplier {
     }
 
     private boolean shouldShowRewardButton() {
-        return this.quest.isActive() && !this.detailsPage && this.showInfo && !this.quest.rewards.isEmpty()
+        return !this.proposal && this.quest.isActive() && !this.detailsPage && this.showInfo && !this.quest.rewards.isEmpty()
                 && this.quest.isCompleted() && this.quest.hasPendingRewards();
     }
 
@@ -281,7 +307,7 @@ public class QuestDetails extends Screen implements NarrationSupplier {
     }
 
     private void handlePrimaryAction() {
-        if (this.detailsPage) {
+        if (this.proposal || this.detailsPage) {
             if (this.minecraft != null) this.minecraft.setScreen(this.previousScreen);
         } else if (this.quest.isActive() && this.quest.isCompleted() && this.quest.isRewarded() && this.quest.isRepeatable()) {
             Services.PLATFORM.sendPacketToServer(new org.infernalstudios.questlog.network.packet.QuestResetPacket(this.quest.getId()));
@@ -293,6 +319,7 @@ public class QuestDetails extends Screen implements NarrationSupplier {
     }
 
     private void claimAllRewards() {
+        if (this.proposal) return;
         for (int i = 0; i < this.quest.rewards.size(); i++) {
             Reward reward = this.quest.rewards.get(i);
             if (!reward.hasRewarded()) {
@@ -353,10 +380,16 @@ public class QuestDetails extends Screen implements NarrationSupplier {
         if (this.followButton != null) {
             boolean followed = org.infernalstudios.questlog.client.gui.TrackedQuestsOverlay.follows(this.quest.getId());
             this.followButton.setMessage(Component.translatable(followed ? "questlog.tracking.unfollow" : "questlog.tracking.follow"));
-            this.followButton.active = followed || this.quest.isActive() && this.quest.isTriggered() && !this.quest.getDisplay().isHidden() && (!this.quest.isCompleted() || this.quest.hasPendingRewards());
+            this.followButton.active = followed || this.quest.isVisibleToPlayer() && (!this.quest.isCompleted() || this.quest.hasPendingRewards());
         }
         super.render(ps, mouseX, mouseY, partialTicks);
         this.renderTitle(ps);
+        if (this.proposal && this.quest.isCompleted() && !this.quest.isRepeatable()) {
+            String status = Component.translatable("questlog.share.already_completed").getString();
+            ps.drawString(this.font, this.font.plainSubstrByWidth(status, this.getDisplay().getLeftPanelWidth() - 36),
+                    this.panel1X + 18, this.panel1Y + this.getDisplay().getPanelHeight() - 20,
+                    this.getPalette().textColor(), false);
+        }
         if (this.description != null) this.description.render(ps, mouseX, mouseY, partialTicks);
         if (this.showInfo) {
             this.renderInfo(ps, mouseX, mouseY, partialTicks);
@@ -477,7 +510,7 @@ public class QuestDetails extends Screen implements NarrationSupplier {
                     }
                     ResourceLocation questId = ResourceLocation.tryParse(click.getValue());
                     Quest target = questId != null ? QuestlogClient.getLocal().getQuest(questId) : null;
-                    if (target != null && this.minecraft != null) {
+                    if (target != null && (target.isVisibleToPlayer() || QuestlogClient.isEditModeActive) && this.minecraft != null) {
                         this.minecraft.setScreen(new QuestDetails(this, target));
                         return true;
                     }
@@ -521,6 +554,11 @@ public class QuestDetails extends Screen implements NarrationSupplier {
     @Override
     public void tick() {
         super.tick();
+        if (this.proposal && !this.quest.isOffered()) {
+            if (this.minecraft != null) this.minecraft.setScreen(this.quest.isVisibleToPlayer()
+                    ? new QuestDetails(this.previousScreen, this.quest) : this.previousScreen);
+            return;
+        }
         if (this.detailsPage) return;
 
         if (this.rewardButton != null) {

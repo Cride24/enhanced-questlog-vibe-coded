@@ -8,13 +8,16 @@ import net.minecraft.resources.ResourceLocation;
 import org.infernalstudios.questlog.Questlog;
 import org.jetbrains.annotations.NotNull;
 
-public record QuestOpenPacket(String target) implements CustomPacketPayload {
+public record QuestOpenPacket(String target, boolean proposal) implements CustomPacketPayload {
     public static final Type<QuestOpenPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Questlog.MODID, "open_ui"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, QuestOpenPacket> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.STRING_UTF8, QuestOpenPacket::target,
+            ByteBufCodecs.BOOL, QuestOpenPacket::proposal,
             QuestOpenPacket::new
     );
+
+    public QuestOpenPacket(String target) { this(target, false); }
 
     @Override
     public @NotNull Type<? extends CustomPacketPayload> type() {

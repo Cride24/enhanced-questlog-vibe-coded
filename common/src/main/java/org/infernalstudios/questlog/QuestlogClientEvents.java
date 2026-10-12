@@ -121,6 +121,8 @@ public class QuestlogClientEvents {
         Quest quest = QuestToastState.queuedPopups.getFirst();
         QuestToastState.queuedPopups.remove(quest);
 
+        if (!quest.isVisibleToPlayer()) return;
+
         Minecraft.getInstance().setScreen(new QuestDetails(Minecraft.getInstance().screen, quest));
 
         SoundEvent sound = quest.getDisplay().getTriggeredSound();

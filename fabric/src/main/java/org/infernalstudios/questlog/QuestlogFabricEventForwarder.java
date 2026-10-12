@@ -5,6 +5,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.message.v1.ServerMessageDecoratorEvent;
 
 public class QuestlogFabricEventForwarder {
     public static void init() {
@@ -14,6 +15,8 @@ public class QuestlogFabricEventForwarder {
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> QuestlogEvents.onServerPlayerLogout(handler.player));
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> QuestlogEvents.registerCommands(dispatcher));
+        ServerMessageDecoratorEvent.EVENT.register(ServerMessageDecoratorEvent.CONTENT_PHASE,
+                org.infernalstudios.questlog.core.QuestChatReferences::decorate);
     }
 
     public static void initClient() {

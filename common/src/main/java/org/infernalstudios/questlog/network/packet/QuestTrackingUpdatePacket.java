@@ -24,7 +24,7 @@ public record QuestTrackingUpdatePacket(List<ResourceLocation> ids) implements C
         if (!manager.isLoaded()) return;
         manager.tracking.replace(packet.ids, id -> {
             var quest = manager.getQuest(id);
-            return quest != null && (manager.tracking.contains(id) || quest.isActive() && quest.isTriggered() && !quest.getDisplay().isHidden())
+            return quest != null && (manager.tracking.contains(id) || quest.isVisibleToPlayer())
                     && (!quest.isActive() || !quest.isCompleted() || !quest.isRewarded());
         });
         manager.tracking.prune(manager);

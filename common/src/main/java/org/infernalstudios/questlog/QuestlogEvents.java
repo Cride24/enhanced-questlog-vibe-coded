@@ -63,7 +63,8 @@ public class QuestlogEvents {
 
     public static void onQuestTriggered(QuestEvent.Triggered event) {
         if (event.isServer) {
-            Services.PLATFORM.sendPacketToClient((ServerPlayer) event.player, new QuestTriggeredPacket(event.quest.getId()));
+            if (event.quest.manager.isSyncedToClient(event.quest.getId()))
+                Services.PLATFORM.sendPacketToClient((ServerPlayer) event.player, new QuestTriggeredPacket(event.quest.getId()));
         } else {
             QuestlogClientEvents.onQuestTriggered(event);
         }
@@ -73,7 +74,8 @@ public class QuestlogEvents {
         if (event.quest == null || !event.quest.isActive()) return;
         if (event.isServer) {
             Questlog.EVENTS.post(event);
-            Services.PLATFORM.sendPacketToClient((ServerPlayer) event.player, new QuestCompletedPacket(event.quest.getId()));
+            if (event.quest.manager.isSyncedToClient(event.quest.getId()))
+                Services.PLATFORM.sendPacketToClient((ServerPlayer) event.player, new QuestCompletedPacket(event.quest.getId()));
 
             for (Reward reward : event.quest.rewards) {
                 if (event.quest.canClaimRewards() && reward.isAutoClaim()) {

@@ -312,8 +312,12 @@ public class ServerPlayerManager {
     }
 
     static void resetSavedQuest(CompoundTag data, ResourceLocation questId, boolean ignoreGlobalCompletion) {
+        CompoundTag previous = data.getCompound(questId.toString());
         CompoundTag questData = new CompoundTag();
         questData.putBoolean("ignore_global_completion", ignoreGlobalCompletion);
+        questData.putBoolean("shared_access", previous.getBoolean("shared_access"));
+        questData.putString("offered_by", previous.getString("offered_by"));
+        questData.putString("offer_version", previous.getString("offer_version"));
         data.put(questId.toString(), questData);
     }
 
@@ -398,6 +402,7 @@ public class ServerPlayerManager {
             Map<ResourceLocation, CompoundTag> data = new HashMap<>();
 
             for (Quest quest : questManager.getAllQuests()) {
+                if (!QuestSharing.maySendDefinition(quest, QuestSharing.canSeeAllDefinitions(serverPlayer, questManager))) continue;
                 definitions.put(quest.getId(), DefinitionUtil.getCachedQuest(quest.getId()).toString());
                 data.put(quest.getId(), quest.serialize());
             }
@@ -417,7 +422,9 @@ public class ServerPlayerManager {
             }
 
             Services.PLATFORM.sendPacketToClient(serverPlayer, new QuestSyncPacket(definitions, chapterDefinitions, data, advancements));
-            Services.PLATFORM.sendPacketToClient(serverPlayer, new QuestEditModePacket(questManager.isEditMode()));
+            questManager.syncedQuests.clear();
+            questManager.syncedQuests.addAll(definitions.keySet());
+            Services.PLATFORM.sendPacketToClient(serverPlayer, new QuestEditModePacket(serverPlayer.hasPermissions(2) && questManager.isEditMode()));
             questManager.tracking.prune(questManager);
             Services.PLATFORM.sendPacketToClient(serverPlayer, new org.infernalstudios.questlog.network.packet.QuestTrackingPacket(questManager.tracking.ids()));
         }

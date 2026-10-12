@@ -34,7 +34,7 @@ public final class QuestTracking {
     }
     public List<Quest> display(QuestManager manager) { return display(manager, true); }
     public List<Quest> display(QuestManager manager, boolean authorMode) {
-        List<Quest> result = ids.stream().map(manager::getQuest).filter(Objects::nonNull).filter(quest -> authorMode || quest.isActive() && quest.isFunctional()).collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+        List<Quest> result = ids.stream().map(manager::getQuest).filter(Objects::nonNull).filter(quest -> authorMode || quest.isVisibleToPlayer() && quest.isFunctional()).collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         // Stable sorting preserves each group's personal order.
         result.sort(Comparator.comparingInt(quest -> quest.isActive() && quest.isCompleted() ? 1 : 0));
         return result;

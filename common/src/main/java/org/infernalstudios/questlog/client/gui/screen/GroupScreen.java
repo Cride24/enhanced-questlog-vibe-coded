@@ -23,6 +23,7 @@ import org.infernalstudios.questlog.client.gui.components.ScrollableComponent;
 import org.infernalstudios.questlog.client.gui.components.scrollable.Scrollable;
 import org.infernalstudios.questlog.network.ClientPacketHandler;
 import org.infernalstudios.questlog.network.packet.GroupActionPacket;
+import org.infernalstudios.questlog.network.packet.QuestShareActionPacket;
 import org.infernalstudios.questlog.platform.Services;
 import org.infernalstudios.questlog.util.texture.Texture;
 import org.jetbrains.annotations.NotNull;
@@ -39,6 +40,7 @@ public class GroupScreen extends Screen {
     private static final int ROW_HEIGHT = 18;
     private static final int[] COLUMNS = {0, 104, 165, PAGE_WIDTH};
     private final Screen journal;
+    private final ResourceLocation shareQuest;
     private String selected = "";
     private String selectedPlayer = "";
     private boolean inspecting;
@@ -52,11 +54,21 @@ public class GroupScreen extends Screen {
     private int left, top;
 
     public GroupScreen(Screen journal) {
+        this(journal, null);
+    }
+
+    public GroupScreen(Screen journal, ResourceLocation shareQuest) {
         super(Component.translatable("questlog.groups.tab"));
         this.journal = journal;
+        this.shareQuest = shareQuest;
     }
 
     private CompoundTag state() { return ClientPacketHandler.groupState(); }
+    private CompoundTag candidates() {
+        if (shareQuest == null) return state();
+        CompoundTag data = ClientPacketHandler.shareCandidates();
+        return shareQuest.toString().equals(data.getString("quest")) ? data : new CompoundTag();
+    }
     private String own() { return state().getString("own"); }
     private String self() { return minecraft != null && minecraft.player != null ? minecraft.player.getUUID().toString() : ""; }
     private CompoundTag group(String id) {
@@ -79,11 +91,16 @@ public class GroupScreen extends Screen {
         left = (width - 245) / 2 + 1 + Questlog.getConfig().gui.mainPanelX;
         top = (height - 136) / 2 + 1 + Questlog.getConfig().gui.mainPanelY;
         rebuild();
-        if (!initialized) { initialized = true; send(GroupActionPacket.REFRESH, "", "", ""); }
+        if (!initialized) {
+            initialized = true;
+            if (shareQuest == null) send(GroupActionPacket.REFRESH, "", "", "");
+            else share(QuestShareActionPacket.SEARCH, "");
+        }
     }
     private boolean initialized;
 
     public void refreshFromServer() {
+        if (shareQuest != null) { rebuild(); return; }
         if (!own().isEmpty()) { selected = own(); inspecting = false; }
         else if (!selected.isEmpty() && group(selected) == null) { selected = ""; inspecting = false; }
         rebuild();
@@ -93,6 +110,7 @@ public class GroupScreen extends Screen {
         clearWidgets();
         panelTitle = "";
         input = null;
+        if (shareQuest != null) { invitePopup(); return; }
         addRenderableWidget(new BookSideTab(left - 32, top + 4, Items.WRITABLE_BOOK.getDefaultInstance(), false,
                 Component.translatable("questlog.groups.journal"), () -> minecraft.setScreen(journal)));
         addRenderableWidget(new BookSideTab(left - 32, top + 65, Items.PLAYER_HEAD.getDefaultInstance(), true,
@@ -288,22 +306,36 @@ public class GroupScreen extends Screen {
     }
 
     private void invitePopup() {
-        panelTitle = label("invite");
+        panelTitle = shareQuest == null ? label("invite") : Component.translatable("questlog.share.title").getString();
         input = new NoShadowEditBox(font, left + 8, top + 38, 215, 20, Component.translatable("questlog.groups.search"));
         input.setMaxLength(32); input.setValue(search);
-        input.setResponder(value -> { search = value; send(GroupActionPacket.REFRESH, "", "", search); });
+        input.setResponder(value -> {
+            search = value;
+            if (shareQuest == null) send(GroupActionPacket.REFRESH, "", "", search);
+            else share(QuestShareActionPacket.SEARCH, search);
+        });
         addRenderableWidget(input);
         setInitialFocus(input);
         List<Row> rows = new ArrayList<>();
-        for (Tag item : state().getList("candidates", Tag.TAG_COMPOUND)) {
+        for (Tag item : candidates().getList("candidates", Tag.TAG_COMPOUND)) {
             CompoundTag person = (CompoundTag) item;
             rows.add(new Row(id(person), person.getString("name"), false, false));
         }
         list(rows, top + 65, 71);
-        button(left + 264, top + 50, "invite_short", () -> {
-            if (!selectedPlayer.isEmpty()) { send(5, own(), selectedPlayer, ""); inviting = false; selectedPlayer = ""; rebuild(); }
+        button(left + 264, top + 50, shareQuest == null ? "invite_short" : "share", () -> {
+            if (!selectedPlayer.isEmpty()) {
+                if (shareQuest == null) { send(5, own(), selectedPlayer, ""); inviting = false; selectedPlayer = ""; rebuild(); }
+                else { share(QuestShareActionPacket.OFFER, selectedPlayer); minecraft.setScreen(journal); }
+            }
         });
-        button(left + 264, top + 76, "back", () -> { inviting = false; selectedPlayer = ""; rebuild(); });
+        button(left + 264, top + 76, shareQuest == null ? "back" : "cancel", () -> {
+            if (shareQuest == null) { inviting = false; selectedPlayer = ""; rebuild(); }
+            else minecraft.setScreen(journal);
+        });
+    }
+
+    private void share(int action, String value) {
+        Services.PLATFORM.sendPacketToServer(new QuestShareActionPacket(action, shareQuest, value));
     }
 
     private void confirm(String kind, Runnable action) {
@@ -340,10 +372,15 @@ public class GroupScreen extends Screen {
                 lineY += font.lineHeight + 2;
             }
         }
-        if (inviting && state().getList("candidates", Tag.TAG_COMPOUND).isEmpty())
+        if ((inviting || shareQuest != null) && candidates().getList("candidates", Tag.TAG_COMPOUND).isEmpty())
             graphics.drawString(font, Component.translatable("questlog.groups.no_players"), left + 8, top + 72, 0xFF4B3422, false);
     }
     @Override public boolean keyPressed(int key, int scan, int mods) {
+        if (shareQuest != null && (key == GLFW.GLFW_KEY_ESCAPE ||
+                ((key == GLFW.GLFW_KEY_E || QuestlogClient.OPEN_SCREEN_KEY.matches(key, scan)) && (input == null || !input.isFocused())))) {
+            minecraft.setScreen(journal);
+            return true;
+        }
         if (key == GLFW.GLFW_KEY_ESCAPE ||
                 ((key == GLFW.GLFW_KEY_E || QuestlogClient.OPEN_SCREEN_KEY.matches(key, scan)) && (input == null || !input.isFocused()))) {
             if (naming || inviting) { naming = false; inviting = false; rebuild(); }

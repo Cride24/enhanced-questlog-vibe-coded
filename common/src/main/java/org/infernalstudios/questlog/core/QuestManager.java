@@ -17,9 +17,12 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 
 public class QuestManager {
     private final Map<ResourceLocation, Quest> quests = new LinkedHashMap<>();
+    final Set<ResourceLocation> syncedQuests = new HashSet<>();
     public Player player;
     public final QuestTracking tracking = new QuestTracking();
     private boolean editMode = false;
@@ -52,6 +55,7 @@ public class QuestManager {
     public void clearQuests() {
         this.quests.values().forEach(quest -> quest.setActive(false));
         this.quests.clear();
+        this.syncedQuests.clear();
     }
 
     public void reload() {
@@ -81,6 +85,8 @@ public class QuestManager {
     public Quest getQuest(ResourceLocation id) {
         return this.quests.get(id);
     }
+
+    public boolean isSyncedToClient(ResourceLocation id) { return this.syncedQuests.contains(id); }
 
     public boolean isClient() {
         return this.player.level().isClientSide();
@@ -184,12 +190,19 @@ public class QuestManager {
             }
             Quest quest = this.quests.get(id);
             if (quest == null) {
+                this.syncedQuests.remove(id);
                 // This will only be called if a definition has been deleted while reloading the server
                 Services.PLATFORM.sendPacketToClient((ServerPlayer) this.player, new QuestRemovePacket(id));
                 Questlog.LOGGER.warn("Quest {} not found in manager, removing from client", id);
             } else {
-                CompoundTag data = this.getQuest(id).serialize();
-                Services.PLATFORM.sendPacketToClient((ServerPlayer) this.player, new QuestDataPacket(id, data));
+                ServerPlayer serverPlayer = (ServerPlayer) this.player;
+                boolean available = QuestSharing.maySendDefinition(quest, QuestSharing.canSeeAllDefinitions(serverPlayer, this));
+                if (available != this.syncedQuests.contains(id)) {
+                    ServerPlayerManager.INSTANCE.syncPlayer(this);
+                } else if (available) {
+                    CompoundTag data = quest.serialize();
+                    Services.PLATFORM.sendPacketToClient(serverPlayer, new QuestDataPacket(id, data));
+                }
                 if (!quest.isActive()) return;
                 Questlog.LOGGER.trace("Sent quest data for {} to client", id);
                 if (!quest.hasSentTrigger && quest.isTriggered()) {

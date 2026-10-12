@@ -21,8 +21,8 @@ import org.infernalstudios.questlog.core.DefinitionUtil;
 import org.infernalstudios.questlog.core.QuestManager;
 import org.infernalstudios.questlog.core.ServerPlayerManager;
 import org.infernalstudios.questlog.core.quests.Quest;
-import org.infernalstudios.questlog.network.packet.QuestEditModePacket;
 import org.infernalstudios.questlog.network.packet.QuestOpenPacket;
+import org.infernalstudios.questlog.core.QuestSharing;
 import org.infernalstudios.questlog.platform.Services;
 
 import java.util.ArrayList;
@@ -58,6 +58,14 @@ public class QuestlogCommands {
     };
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(Commands.literal("questlog_view")
+                .then(Commands.argument("quest", ResourceLocationArgument.id())
+                        .executes(ctx -> QuestSharing.open(ctx.getSource().getPlayerOrException(),
+                                ResourceLocationArgument.getId(ctx, "quest"), false) ? 1 : 0)));
+        dispatcher.register(Commands.literal("questlog_proposal")
+                .then(Commands.argument("quest", ResourceLocationArgument.id())
+                        .executes(ctx -> QuestSharing.open(ctx.getSource().getPlayerOrException(),
+                                ResourceLocationArgument.getId(ctx, "quest"), true) ? 1 : 0)));
         LiteralCommandNode<CommandSourceStack> root = dispatcher.register(
                 Commands.literal("questlog")
                         .requires(stack -> stack.hasPermission(2))
@@ -213,7 +221,7 @@ public class QuestlogCommands {
         QuestManager manager = ServerPlayerManager.INSTANCE.getManagerByPlayer(player);
         manager.setEditMode(enabled);
         ServerPlayerManager.INSTANCE.save(manager);
-        Services.PLATFORM.sendPacketToClient(player, new QuestEditModePacket(enabled));
+        ServerPlayerManager.INSTANCE.syncPlayer(manager);
         ctx.getSource().sendSuccess(() -> Component.literal("Edit mode for " + player.getName().getString() + " set to " + enabled), true);
         return 1;
     }

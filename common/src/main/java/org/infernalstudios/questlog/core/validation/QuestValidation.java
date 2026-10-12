@@ -36,7 +36,7 @@ public final class QuestValidation {
         number(definition,"sort_order","sort_order",false,Integer.MIN_VALUE,issues);
         number(definition,"order","order",false,Integer.MIN_VALUE,issues);
         if (definition.has("_validation_error")) issues.add(new Issue("$", "questlog.validation.json", true));
-        for (String key : List.of("active", "repeatable", "global", "hidden", "hide_when_completed")) {
+        for (String key : List.of("active", "repeatable", "global", "shareable", "hidden", "hide_when_completed")) {
             bool(definition, key, key, issues);
         }
         reference(definition.get("chapter"), "chapter", EditorMetadata.SuggestionType.CHAPTER, false, references, issues);

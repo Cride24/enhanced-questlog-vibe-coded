@@ -40,6 +40,11 @@ public class QuestlogNeoForgeEventForwarder {
         QuestlogEvents.registerCommands(event.getDispatcher());
     }
 
+    @SubscribeEvent
+    public static void decorateChat(net.neoforged.neoforge.event.ServerChatEvent event) {
+        event.setMessage(org.infernalstudios.questlog.core.QuestChatReferences.decorate(event.getPlayer(), event.getMessage()));
+    }
+
     public static class ClientForgeEvents {
         @SubscribeEvent
         public static void renderHud(net.neoforged.neoforge.client.event.RenderGuiEvent.Post event) {

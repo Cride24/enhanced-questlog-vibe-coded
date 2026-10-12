@@ -122,6 +122,15 @@ tasks.register('verifyAdventureGroups', JavaExec) {
 }
 tasks.named('check') { dependsOn 'verifyAdventureGroups' }
 
+tasks.register('verifyQuestSharing', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'org.infernalstudios.questlog.core.QuestSharingVerification'
+    workingDir = layout.buildDirectory.dir('verification').get().asFile
+    doFirst { workingDir.mkdirs() }
+}
+tasks.named('check') { dependsOn 'verifyQuestSharing' }
+
 configurations {
     commonJava {
         canBeResolved = false
