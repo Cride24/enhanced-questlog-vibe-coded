@@ -13,6 +13,7 @@ import org.infernalstudios.questlog.client.gui.screen.ChapterEditorScreen;
 import org.infernalstudios.questlog.client.gui.screen.QuestEditorScreen;
 import org.infernalstudios.questlog.client.gui.screen.QuestDetails;
 import org.infernalstudios.questlog.client.gui.screen.QuestlogScreen;
+import org.infernalstudios.questlog.client.gui.screen.GroupScreen;
 import org.infernalstudios.questlog.core.DefinitionUtil;
 import org.infernalstudios.questlog.core.QuestManager;
 import org.infernalstudios.questlog.core.quests.Quest;
@@ -28,8 +29,16 @@ public class ClientPacketHandler {
     private static final Gson GSON = new GsonBuilder().create();
     private static final List<QuestDefinitionPacket> DEFERRED_DEFS = new CopyOnWriteArrayList<>();
     private static QuestSyncPacket DEFERRED_SYNC_PACKET = null;
+    private static CompoundTag groupState = new CompoundTag();
 
-    public static void clearSession() { DEFERRED_DEFS.clear(); DEFERRED_SYNC_PACKET = null; }
+    public static CompoundTag groupState() { return groupState; }
+
+    public static void clearSession() { DEFERRED_DEFS.clear(); DEFERRED_SYNC_PACKET = null; groupState = new CompoundTag(); }
+
+    public static void handle(GroupStatePacket packet, IPacketContext ctx) {
+        groupState = packet.data();
+        if (Minecraft.getInstance().screen instanceof GroupScreen screen) screen.refreshFromServer();
+    }
 
     public static void handle(QuestTrackingPacket packet, IPacketContext ctx) {
         org.infernalstudios.questlog.client.gui.TrackedQuestsOverlay.accept(packet.ids());

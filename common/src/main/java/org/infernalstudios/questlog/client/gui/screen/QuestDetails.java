@@ -137,6 +137,13 @@ public class QuestDetails extends Screen implements NarrationSupplier {
         this.panel2X = baseX + leftWidth + PANEL_SPACING + this.getDisplay().getRightPanelXOffset();
         this.panel2Y = baseY + this.getDisplay().getRightPanelYOffset();
 
+        this.addRenderableWidget(new org.infernalstudios.questlog.client.gui.components.BookSideTab(
+                this.panel1X - 32, this.panel1Y + 4, net.minecraft.world.item.Items.WRITABLE_BOOK.getDefaultInstance(), true,
+                Component.translatable("questlog.groups.journal"), () -> {}));
+        this.addRenderableWidget(new org.infernalstudios.questlog.client.gui.components.BookSideTab(
+                this.panel1X - 32, this.panel1Y + 65, net.minecraft.world.item.Items.PLAYER_HEAD.getDefaultInstance(), false,
+                Component.translatable("questlog.groups.tab"), () -> this.minecraft.setScreen(new GroupScreen(this))));
+
         int iconWidth = this.getDisplay().getIcon() != null ? this.getDisplay().getIcon().width() + 4 : 0;
         int titleWidth = Math.max(1, leftWidth - 36 - iconWidth);
         String fullTitle = this.getDisplay().getTitle().getString();

@@ -113,6 +113,15 @@ tasks.register('verifyProgressPreservation', JavaExec) {
 }
 tasks.named('check') { dependsOn 'verifyProgressPreservation' }
 
+tasks.register('verifyAdventureGroups', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'org.infernalstudios.questlog.core.AdventureGroupsVerification'
+    workingDir = layout.buildDirectory.dir('verification').get().asFile
+    doFirst { workingDir.mkdirs() }
+}
+tasks.named('check') { dependsOn 'verifyAdventureGroups' }
+
 configurations {
     commonJava {
         canBeResolved = false

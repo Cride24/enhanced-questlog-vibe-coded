@@ -7,6 +7,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.infernalstudios.questlog.commands.QuestlogCommands;
 import org.infernalstudios.questlog.core.DefinitionUtil;
+import org.infernalstudios.questlog.core.AdventureGroups;
 import org.infernalstudios.questlog.core.QuestManager;
 import org.infernalstudios.questlog.core.ServerPlayerManager;
 import org.infernalstudios.questlog.core.quests.rewards.Reward;
@@ -23,6 +24,7 @@ public class QuestlogEvents {
         DefinitionUtil.loadFromConfig();
         ServerPlayerManager.INSTANCE = new ServerPlayerManager(server);
         ServerPlayerManager.INSTANCE.load();
+        AdventureGroups.INSTANCE = new AdventureGroups(server);
     }
 
     public static void onPlayerSave(ServerPlayer player) {
@@ -33,6 +35,10 @@ public class QuestlogEvents {
     }
 
     public static void onServerStop() {
+        if (AdventureGroups.INSTANCE != null) {
+            AdventureGroups.INSTANCE.save();
+            AdventureGroups.INSTANCE = null;
+        }
         if (ServerPlayerManager.INSTANCE != null) {
             ServerPlayerManager.INSTANCE.save();
             ServerPlayerManager.INSTANCE = null;
@@ -44,10 +50,15 @@ public class QuestlogEvents {
         if (ServerPlayerManager.INSTANCE == null) return;
         QuestManager manager = ServerPlayerManager.INSTANCE.getManagerByPlayer(player);
         ServerPlayerManager.INSTANCE.load(manager);
+        if (AdventureGroups.INSTANCE != null) AdventureGroups.INSTANCE.onLogin(player);
 
         if (QuestlogMigrator.showDatapackWarning && player.hasPermissions(2)) {
             player.sendSystemMessage(Component.literal("§e[Questlog] Warning: Quests are now loaded from the config folder. Datapacks are no longer supported! Your old datapack quests were automatically migrated."));
         }
+    }
+
+    public static void onServerPlayerLogout(ServerPlayer player) {
+        if (AdventureGroups.INSTANCE != null) AdventureGroups.INSTANCE.onLogout(player);
     }
 
     public static void onQuestTriggered(QuestEvent.Triggered event) {

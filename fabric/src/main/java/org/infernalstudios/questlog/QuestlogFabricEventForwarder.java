@@ -11,6 +11,7 @@ public class QuestlogFabricEventForwarder {
         ServerLifecycleEvents.SERVER_STARTED.register(QuestlogEvents::onServerStart);
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> QuestlogEvents.onServerStop());
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> QuestlogEvents.onServerPlayerLogin(handler.player));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> QuestlogEvents.onServerPlayerLogout(handler.player));
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> QuestlogEvents.registerCommands(dispatcher));
     }

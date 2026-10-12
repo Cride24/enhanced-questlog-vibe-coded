@@ -31,6 +31,11 @@ public class QuestlogNeoForgeEventForwarder {
     }
 
     @SubscribeEvent
+    public static void onServerPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        QuestlogEvents.onServerPlayerLogout((ServerPlayer) event.getEntity());
+    }
+
+    @SubscribeEvent
     public static void registerCommands(RegisterCommandsEvent event) {
         QuestlogEvents.registerCommands(event.getDispatcher());
     }
