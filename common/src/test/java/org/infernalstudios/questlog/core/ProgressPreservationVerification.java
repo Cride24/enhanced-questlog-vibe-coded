@@ -6,6 +6,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.Bootstrap;
 import org.infernalstudios.questlog.core.quests.Quest;
+import org.infernalstudios.questlog.core.quests.rewards.ChoiceReward;
+import org.infernalstudios.questlog.core.quests.rewards.RandomReward;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -60,6 +62,17 @@ public final class ProgressPreservationVerification {
         reset.deserialize(player.getCompound(ID.toString()));
         check(!reset.isCompleted() && !reset.isRewarded(), "A targeted reset permits replay and reward collection");
         check(player.getCompound(OTHER.toString()).equals(otherProgress), "A neighbouring quest stays untouched");
+        finished.deserialize(player.getCompound(ID.toString()));
+        check(!finished.isCompleted() && !finished.isRewarded() && finished.objectives.get(0).getUnits() == 0,
+                "An offline reset clears stale in-memory progress on load");
+        ChoiceReward choice = new ChoiceReward(JsonParser.parseString("{\"choices\":[{\"type\":\"questlog:experience\",\"experience\":1}]}").getAsJsonObject());
+        choice.getChoices().get(0).setRewarded(true);
+        choice.deserialize(new CompoundTag());
+        check(!choice.getChoices().get(0).hasRewarded(), "An empty save clears a nested choice receipt");
+        RandomReward random = new RandomReward(JsonParser.parseString("{\"entries\":[{\"reward\":{\"type\":\"questlog:experience\",\"experience\":1}}]}").getAsJsonObject());
+        random.getEntries().get(0).setRewarded(true);
+        random.deserialize(new CompoundTag());
+        check(!random.getEntries().get(0).hasRewarded(), "An empty save clears a nested random receipt");
 
         Path tempDir = Files.createTempDirectory("questlog-progress-");
         UUID offlineId = UUID.randomUUID();
@@ -90,10 +103,22 @@ public final class ProgressPreservationVerification {
         completion.putBoolean("completed", true);
         completion.put("rewards", oldSave.get("rewards"));
         globalData.put(ID.toString(), completion);
+        Quest globalSource = quest(1, 5, false, true);
+        globalSource.objectives.get(0).forceSetUnits(1);
+        globalSource.hasSentCompletion = true;
+        check(globalSource.canClaimRewards(), "The player completing a global quest can claim its reward");
         Quest inherited = quest(1, 5, false, true);
         check(ServerPlayerManager.mergeGlobalCompletion(inherited, globalData) && inherited.isCompleted(),
                 "Global completion reaches an existing or new player");
         check(!inherited.isRewarded(), "Global completion does not copy another player's reward receipt");
+        check(!inherited.canClaimRewards(), "An inherited global completion does not grant a reward");
+        Quest inheritedAfterLogin = quest(1, 5, false, true);
+        inheritedAfterLogin.deserialize(inherited.serialize());
+        check(!inheritedAfterLogin.canClaimRewards(), "Reward restriction survives reconnection");
+        inheritedAfterLogin.resetProgress(true);
+        inheritedAfterLogin.objectives.get(0).forceSetUnits(1);
+        check(inheritedAfterLogin.canClaimRewards() && inheritedAfterLogin.isCompleted(),
+                "A personally reset global quest can be completed for its reward");
         ServerPlayerManager.resetSavedQuest(player, ID, true);
         Quest personalReset = quest(1, 5, false, true);
         personalReset.deserialize(player.getCompound(ID.toString()));
@@ -105,6 +130,7 @@ public final class ProgressPreservationVerification {
         globalData.remove(ID.toString());
         check(!ServerPlayerManager.mergeGlobalCompletion(resetForAll, globalData) && !resetForAll.isCompleted(),
                 "Reset for all clears the inherited completion");
+        check(resetForAll.canClaimRewards(), "Reset for all opens reward eligibility for the next completion");
 
         Quest repeatable = quest(1, 5, true, false);
         repeatable.deserialize(oldSave);

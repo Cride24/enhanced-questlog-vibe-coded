@@ -106,12 +106,12 @@ public class InfoEntry implements Renderable, GuiEventListener {
                 || rewardData.getReward() != null && rewardData.getReward().getContainer() != null) {
             return;
         }
-        Component status = rewardData.hasRewarded() ?
+        Component status = !this.questDetails.quest.canClaimRewards() && !rewardData.hasRewarded() ? Component.translatable("questlog.reward.inherited") : rewardData.hasRewarded() ?
                 (display != null ? display.getCollectedText() : Component.translatable("questlog.reward.collected")) :
                 (display != null ? display.getUncollectedText() : Component.translatable("questlog.reward.uncollected"));
 
         ps.drawString(Minecraft.getInstance().font, status, textX, this.getStatusY(),
-                rewardData.hasRewarded() ? questDetails.getPalette().completedTextColor() : questDetails.getPalette().progressTextColor(), false);
+                !this.questDetails.quest.hasPendingRewards() ? questDetails.getPalette().completedTextColor() : questDetails.getPalette().progressTextColor(), false);
     }
 
     private void drawObjectiveStatus(GuiGraphics ps, int textX) {

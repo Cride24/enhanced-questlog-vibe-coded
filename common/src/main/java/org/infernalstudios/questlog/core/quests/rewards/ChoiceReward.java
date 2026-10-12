@@ -115,10 +115,8 @@ public class ChoiceReward extends Reward {
         for (int i : data.getIntArray("selected_indices")) {
             this.selectedIndices.add(i);
         }
+        for (Reward choice : this.choices) choice.setRewarded(false);
         if (this.hasRewarded()) {
-            for (Reward choice : this.choices) {
-                choice.setRewarded(false);
-            }
             for (int index : this.selectedIndices) {
                 if (index >= 0 && index < this.choices.size()) {
                     this.choices.get(index).setRewarded(true);

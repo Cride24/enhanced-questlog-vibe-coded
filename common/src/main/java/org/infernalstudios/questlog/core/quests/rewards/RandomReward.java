@@ -117,10 +117,8 @@ public class RandomReward extends Reward {
         for (int i : data.getIntArray("rolled_indices")) {
             this.rolledIndices.add(i);
         }
+        for (Reward entry : this.entries) entry.setRewarded(false);
         if (this.hasRewarded()) {
-            for (Reward entry : this.entries) {
-                entry.setRewarded(false);
-            }
             for (int index : this.rolledIndices) {
                 if (index >= 0 && index < this.entries.size()) {
                     this.entries.get(index).setRewarded(true);

@@ -14,6 +14,8 @@ import java.util.List;
 
 public class ScrollableText implements Scrollable, GuiEventListener {
 
+    private static final int TOP_PADDING = 2;
+
     private final Font font;
     private final FormattedText text;
     private final int color;
@@ -48,7 +50,7 @@ public class ScrollableText implements Scrollable, GuiEventListener {
                     this.font,
                     this.getLines().get(i),
                     (int) this.scroller.getXOffset(),
-                    (int) this.scroller.getYOffset() + i * this.font.lineHeight,
+                    (int) this.scroller.getYOffset() + TOP_PADDING + i * this.font.lineHeight,
                     this.color,
                     false
             );
@@ -57,9 +59,10 @@ public class ScrollableText implements Scrollable, GuiEventListener {
 
     @Nullable
     public Style getStyleAt(double mouseX, double mouseY) {
-        if (this.getLines() == null || this.scroller == null) return null;
+        if (this.scroller == null || this.getLines() == null) return null;
 
-        int lineIndex = (int) mouseY / this.font.lineHeight;
+        if (mouseY < TOP_PADDING) return null;
+        int lineIndex = (int) (mouseY - TOP_PADDING) / this.font.lineHeight;
 
         if (lineIndex >= 0 && lineIndex < this.getLines().size()) {
             return this.font.getSplitter().componentStyleAtWidth(this.getLines().get(lineIndex), (int) mouseX);
@@ -84,7 +87,7 @@ public class ScrollableText implements Scrollable, GuiEventListener {
 
     @Override
     public int getHeight() {
-        return this.getLines().size() * this.font.lineHeight;
+        return TOP_PADDING + this.getLines().size() * this.font.lineHeight;
     }
 
     @Override

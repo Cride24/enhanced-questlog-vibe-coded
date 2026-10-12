@@ -37,6 +37,7 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
     private JsonObject definition;
     private CompoundTag suspendedProgress;
     private boolean ignoreGlobalCompletion;
+    private boolean inheritedGlobalCompletion;
 
     public Quest(
             QuestDisplayData display,
@@ -153,6 +154,7 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
 
     public void resetProgress(boolean ignoreGlobalCompletion) {
         this.ignoreGlobalCompletion = ignoreGlobalCompletion;
+        this.inheritedGlobalCompletion = false;
         this.suspendedProgress = null;
         this.prerequisites.forEach(trigger -> trigger.forceSetUnits(0));
         this.objectives.forEach(obj -> obj.forceSetUnits(0));
@@ -208,8 +210,17 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
         return this.ignoreGlobalCompletion;
     }
 
+    public boolean canClaimRewards() {
+        return !this.global || !this.inheritedGlobalCompletion;
+    }
+
+    public boolean hasPendingRewards() {
+        return this.canClaimRewards() && !this.isRewarded();
+    }
+
     public void grantGlobalCompletion() {
         this.hasSentCompletion = true;
+        this.inheritedGlobalCompletion = true;
     }
 
     public void markForUpdate() {
@@ -221,6 +232,7 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
         data.putBoolean("completed", this.hasSentCompletion);
         data.putBoolean("triggered", this.hasSentTrigger);
         data.putBoolean("ignore_global_completion", this.ignoreGlobalCompletion);
+        data.putBoolean("global_completion_inherited", this.inheritedGlobalCompletion);
 
         data.put(
                 "prerequisites",
@@ -268,6 +280,7 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
         this.hasSentCompletion = data.getBoolean("completed");
         this.hasSentTrigger = data.getBoolean("triggered");
         this.ignoreGlobalCompletion = data.getBoolean("ignore_global_completion");
+        this.inheritedGlobalCompletion = data.getBoolean("global_completion_inherited");
 
         if (this.prerequisites.isEmpty()) {
             this.hasSentTrigger = true;
@@ -275,23 +288,23 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
 
         List<Tag> reqData = data.contains("prerequisites") ? data.getList("prerequisites", Tag.TAG_COMPOUND)
                 : data.getList("requirements", Tag.TAG_COMPOUND);
-        for (int i = 0; i < Math.min(reqData.size(), this.prerequisites.size()); i++) {
-            this.prerequisites.get(i).deserialize((CompoundTag) reqData.get(i));
+        for (int i = 0; i < this.prerequisites.size(); i++) {
+            this.prerequisites.get(i).deserialize(i < reqData.size() ? (CompoundTag) reqData.get(i) : new CompoundTag());
         }
 
         List<Tag> objectiveData = data.getList("objectives", Tag.TAG_COMPOUND);
-        for (int i = 0; i < Math.min(objectiveData.size(), this.objectives.size()); i++) {
-            this.objectives.get(i).deserialize((CompoundTag) objectiveData.get(i));
+        for (int i = 0; i < this.objectives.size(); i++) {
+            this.objectives.get(i).deserialize(i < objectiveData.size() ? (CompoundTag) objectiveData.get(i) : new CompoundTag());
         }
 
         List<Tag> failureData = data.getList("failures", Tag.TAG_COMPOUND);
-        for (int i = 0; i < Math.min(failureData.size(), this.failureConditions.size()); i++) {
-            this.failureConditions.get(i).deserialize((CompoundTag) failureData.get(i));
+        for (int i = 0; i < this.failureConditions.size(); i++) {
+            this.failureConditions.get(i).deserialize(i < failureData.size() ? (CompoundTag) failureData.get(i) : new CompoundTag());
         }
 
         List<Tag> rewardData = data.getList("rewards", Tag.TAG_COMPOUND);
-        for (int i = 0; i < Math.min(rewardData.size(), this.rewards.size()); i++) {
-            this.rewards.get(i).deserialize((CompoundTag) rewardData.get(i));
+        for (int i = 0; i < this.rewards.size(); i++) {
+            this.rewards.get(i).deserialize(i < rewardData.size() ? (CompoundTag) rewardData.get(i) : new CompoundTag());
         }
     }
 
@@ -302,6 +315,7 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
         tag.putBoolean("completed", this.hasSentCompletion);
         tag.putBoolean("triggered", this.hasSentTrigger);
         tag.putBoolean("ignore_global_completion", this.ignoreGlobalCompletion);
+        tag.putBoolean("global_completion_inherited", this.inheritedGlobalCompletion);
         tag.put("prerequisites", Util.toNbtList(this.prerequisites, Objective::serialize));
         tag.put("objectives", Util.toNbtList(this.objectives, Objective::serialize));
         tag.put("failures", Util.toNbtList(this.failureConditions, Objective::serialize));

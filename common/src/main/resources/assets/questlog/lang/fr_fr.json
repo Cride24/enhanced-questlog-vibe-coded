@@ -1,4 +1,7 @@
 {
+  "questlog.quest.global": "Quête mondiale",
+  "questlog.reward.inherited": "Terminée par un autre joueur",
+  "questlog.tracking.completed": "Terminée",
   "text.autoconfig.questlog-client.category.itemLinks": "Liens vers les objets",
   "text.autoconfig.questlog-client.option.itemLinks.showTooltips": "Afficher les infobulles des objets",
   "text.autoconfig.questlog-client.option.itemLinks.showTooltips.@Tooltip": "Affiche les infobulles au survol des liens et des objectifs associés à un objet.",

@@ -171,7 +171,9 @@ public class ServerPlayerManager {
         }
 
         boolean shouldSave = false;
-        questManager.reload();
+        // The saved file is authoritative on login, including offline resets.
+        questManager.clearQuests();
+        questManager.createAllQuests();
 
         if (data.contains("edit_mode")) {
             questManager.setEditMode(data.getBoolean("edit_mode"));
@@ -270,7 +272,7 @@ public class ServerPlayerManager {
                 if (manager == null) continue;
                 Quest q = manager.getQuest(id);
                 if (q != null && manager.isLoaded() && !q.ignoresGlobalCompletion()) {
-                    q.grantGlobalCompletion();
+                    if (q != sourceQuest && !q.hasSentCompletion) q.grantGlobalCompletion();
                     manager.sync(id);
                     this.save(manager);
                 }

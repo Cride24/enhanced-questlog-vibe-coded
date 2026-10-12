@@ -144,7 +144,7 @@ public class ScrollableInfo implements Scrollable, GuiEventListener {
                             && mouseY - entryY >= 2 && mouseY - entryY < 2 + entry.getNameHeight()
                             && entry.handleObjectiveItemClick();
                 }
-                return !this.questDetails.quest.isRewarded() && entry.handleChoiceClick();
+                return this.questDetails.quest.hasPendingRewards() && entry.handleChoiceClick();
             }
         }
         return false;

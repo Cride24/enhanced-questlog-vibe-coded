@@ -57,8 +57,8 @@ public class QuestList extends AbstractContainerEventHandler implements Scrollab
             }
 
             if (!QuestlogClient.isEditModeActive) {
-                int tierA = !qa.isCompleted() ? 0 : (!qa.isRewarded() ? 1 : 2);
-                int tierB = !qb.isCompleted() ? 0 : (!qb.isRewarded() ? 1 : 2);
+                int tierA = !qa.isCompleted() ? 0 : (qa.hasPendingRewards() ? 1 : 2);
+                int tierB = !qb.isCompleted() ? 0 : (qb.hasPendingRewards() ? 1 : 2);
                 if (tierA != tierB) {
                     return Integer.compare(tierA, tierB);
                 }
@@ -267,11 +267,11 @@ public class QuestList extends AbstractContainerEventHandler implements Scrollab
                     int titleWidth = font.width(title);
                     int statusX = currentX + titleWidth + 8;
 
-                    Component statusText = this.quest.isRewarded()
-                            ? Component.translatable("questlog.quest.completed")
-                            : Component.translatable("questlog.quest.uncollected");
+                    Component statusText = this.quest.hasPendingRewards()
+                            ? Component.translatable("questlog.quest.uncollected")
+                            : Component.translatable("questlog.quest.completed");
 
-                    int statusColor = this.quest.isRewarded() ? Questlog.getConfig().colors.completedTextColor : Questlog.getConfig().colors.uncollectedTextColor;
+                    int statusColor = this.quest.hasPendingRewards() ? Questlog.getConfig().colors.uncollectedTextColor : Questlog.getConfig().colors.completedTextColor;
 
                     ps.drawString(font, statusText, statusX, y, statusColor, false);
                 }
@@ -312,7 +312,7 @@ public class QuestList extends AbstractContainerEventHandler implements Scrollab
                         Questlog.getConfig().colors.textColor,
                         false
                 );
-                if (!this.quest.isRewarded()) {
+                if (this.quest.hasPendingRewards()) {
                     ps.drawString(
                             font,
                             Component.translatable("questlog.quest.uncollected"),

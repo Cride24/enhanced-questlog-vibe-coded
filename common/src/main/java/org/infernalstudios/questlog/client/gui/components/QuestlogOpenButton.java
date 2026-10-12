@@ -67,7 +67,7 @@ public class QuestlogOpenButton implements Renderable, GuiEventListener, Narrata
                 QuestManager manager = QuestlogClient.getLocal();
                 if (manager != null) {
                     for (Quest quest : manager.getAllQuests()) {
-                        if (quest.isCompleted() && !quest.isRewarded()) {
+                        if (quest.isCompleted() && quest.hasPendingRewards()) {
                             notifyQuest = quest;
                             break;
                         }

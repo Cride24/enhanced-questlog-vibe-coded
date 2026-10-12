@@ -155,7 +155,7 @@ public final class TrackedQuestsOverlay {
         } else graphics.drawString(font,"≡",window.x+12,y+8,palette.textColor(),false);
         int color=quest.isActive() ? palette.textColor() : 0x777777;
         graphics.drawString(font,font.plainSubstrByWidth(quest.getDisplay().getTitle().getString(),window.width-48),window.x+32,y+3,color,false);
-        String status=!quest.isActive() ? "disabled" : quest.isCompleted() ? "reward_pending" : quest.isFailed() ? "failed" : !quest.isTriggered() ? "locked" : "in_progress";
+        String status=!quest.isActive() ? "disabled" : quest.isCompleted() ? (quest.hasPendingRewards() ? "reward_pending" : "completed") : quest.isFailed() ? "failed" : !quest.isTriggered() ? "locked" : "in_progress";
         graphics.drawString(font,font.plainSubstrByWidth(Component.translatable("questlog.tracking."+status).getString(),window.width-48),window.x+32,y+14,quest.isActive()?palette.progressTextColor():0x777777,false);
     }
     private static double floatingTop(double pointerY) {

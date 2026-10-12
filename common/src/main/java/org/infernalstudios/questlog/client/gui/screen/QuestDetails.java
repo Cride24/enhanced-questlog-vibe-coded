@@ -48,7 +48,6 @@ public class QuestDetails extends Screen implements NarrationSupplier {
 
     private final boolean detailsPage;
     private boolean showInfo;
-    private boolean openingDetailsPage;
 
     public final Quest quest;
 
@@ -121,7 +120,6 @@ public class QuestDetails extends Screen implements NarrationSupplier {
         super.init();
         QuestlogClientEvents.mostRecentNotificationQuest = null;
 
-        this.openingDetailsPage = false;
         this.showInfo = !this.detailsPage && (!this.getDisplay().getObjectiveDisplayData().isEmpty()
                 || !this.getDisplay().getRewardDisplayData().isEmpty());
 
@@ -169,7 +167,7 @@ public class QuestDetails extends Screen implements NarrationSupplier {
                     Component.translatable(org.infernalstudios.questlog.client.gui.TrackedQuestsOverlay.follows(this.quest.getId()) ? "questlog.tracking.unfollow" : "questlog.tracking.follow"),
                     () -> org.infernalstudios.questlog.client.gui.TrackedQuestsOverlay.toggle(this.quest.getId()),this.getGuiSet());
             this.followButton.active = org.infernalstudios.questlog.client.gui.TrackedQuestsOverlay.follows(this.quest.getId())
-                    || this.quest.isActive() && this.quest.isTriggered() && (!this.quest.isCompleted() || !this.quest.isRewarded());
+                    || this.quest.isActive() && this.quest.isTriggered() && (!this.quest.isCompleted() || this.quest.hasPendingRewards());
             this.addRenderableWidget(this.followButton);
         }
         int buttonY = this.panel1Y + height + 2;
@@ -205,7 +203,6 @@ public class QuestDetails extends Screen implements NarrationSupplier {
                     Component.translatable("questlog.info.details"),
                     () -> {
                         if (this.minecraft != null) {
-                            this.openingDetailsPage = true;
                             this.minecraft.setScreen(new QuestDetails(this, this.quest, true));
                         }
                     },
@@ -256,7 +253,7 @@ public class QuestDetails extends Screen implements NarrationSupplier {
 
     private boolean shouldShowRewardButton() {
         return this.quest.isActive() && !this.detailsPage && this.showInfo && !this.quest.rewards.isEmpty()
-                && this.quest.isCompleted() && !this.quest.isRewarded();
+                && this.quest.isCompleted() && this.quest.hasPendingRewards();
     }
 
     private void updateRewardButton() {
@@ -314,12 +311,13 @@ public class QuestDetails extends Screen implements NarrationSupplier {
         int leftWidth = this.getDisplay().getLeftPanelWidth();
         int rightWidth = this.getDisplay().getRightPanelWidth();
         int height = this.getDisplay().getPanelHeight();
+        int globalOffset = this.quest.isGlobal() ? 6 : 0;
 
         this.description = new ScrollableComponent(
                 this.panel1X + CONTENT_X,
-                this.panel1Y + TITLE_Y + this.titleHeight + 7,
+                this.panel1Y + TITLE_Y + globalOffset + this.titleHeight + 7,
                 leftWidth - 38,
-                Math.max(1, height - 68 - (this.titleHeight - TITLE_HEIGHT)),
+                Math.max(1, height - 68 - (this.titleHeight - TITLE_HEIGHT) - globalOffset),
                 new ScrollableText(this.minecraft.font, this.detailsPage ? this.getDisplay().getDetails()
                         : this.getDisplay().getDescription(this.quest), this.getPalette().textColor())
         );
@@ -348,7 +346,7 @@ public class QuestDetails extends Screen implements NarrationSupplier {
         if (this.followButton != null) {
             boolean followed = org.infernalstudios.questlog.client.gui.TrackedQuestsOverlay.follows(this.quest.getId());
             this.followButton.setMessage(Component.translatable(followed ? "questlog.tracking.unfollow" : "questlog.tracking.follow"));
-            this.followButton.active = followed || this.quest.isActive() && this.quest.isTriggered() && !this.quest.getDisplay().isHidden() && (!this.quest.isCompleted() || !this.quest.isRewarded());
+            this.followButton.active = followed || this.quest.isActive() && this.quest.isTriggered() && !this.quest.getDisplay().isHidden() && (!this.quest.isCompleted() || this.quest.hasPendingRewards());
         }
         super.render(ps, mouseX, mouseY, partialTicks);
         this.renderTitle(ps);
@@ -485,19 +483,24 @@ public class QuestDetails extends Screen implements NarrationSupplier {
 
     private void renderTitle(GuiGraphics ps) {
         QuestDisplayData display = this.getDisplay();
+        int titleY = TITLE_Y + (this.quest.isGlobal() ? 6 : 0);
+        if (this.quest.isGlobal()) {
+            ps.drawString(this.font, Component.translatable("questlog.quest.global"),
+                    this.panel1X + CONTENT_X, this.panel1Y + 10, this.getPalette().textColor(), false);
+        }
         int iconWidth = display.getIcon() != null ? display.getIcon().width() + 4 : 0;
         int textWidth = this.titleLines.stream().mapToInt(this.font::width).max().orElse(0);
         int x = this.panel1X + (display.getLeftPanelWidth() - textWidth - iconWidth) / 2;
         if (display.getIcon() != null) {
-            display.getIcon().blit(ps, x, this.panel1Y + TITLE_Y);
+            display.getIcon().blit(ps, x, this.panel1Y + titleY);
         }
-        int y = this.panel1Y + TITLE_Y + 4;
+        int y = this.panel1Y + titleY + 4;
         for (net.minecraft.util.FormattedCharSequence line : this.titleLines) {
             ps.drawString(this.font, line, x + iconWidth, y, this.getPalette().titleColor(), false);
             y += this.font.lineHeight;
         }
         this.getGuiSet().smallHR.blit(ps, this.panel1X + (display.getLeftPanelWidth() - 132) / 2 - 60,
-                this.panel1Y + TITLE_Y + this.titleHeight + HR_Y_OFFSET);
+                this.panel1Y + titleY + this.titleHeight + HR_Y_OFFSET);
     }
 
     private void renderInfo(GuiGraphics ps, int mouseX, int mouseY, float partialTicks) {
@@ -537,10 +540,6 @@ public class QuestDetails extends Screen implements NarrationSupplier {
 
     @Override
     public void removed() {
-        if (!this.detailsPage && !this.openingDetailsPage
-                && this.quest.isCompleted() && this.quest.isRewarded() && this.quest.isRepeatable()) {
-            Services.PLATFORM.sendPacketToServer(new org.infernalstudios.questlog.network.packet.QuestResetPacket(this.quest.getId()));
-        }
         if (this.changedCursor) {
             long window = this.minecraft.getWindow().getWindow();
             GLFW.glfwSetCursor(window, 0L);

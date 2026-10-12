@@ -435,7 +435,7 @@ public class QuestlogScreen extends Screen {
                 .filter(quest -> QuestlogClient.isEditModeActive
                         || !quest.getDisplay().shouldHideWhenCompleted()
                         || !quest.isCompleted()
-                        || !quest.isRewarded())
+                        || quest.hasPendingRewards())
                 .filter(quest -> {
                     String chapterStr = quest.getDisplay().getChapter();
                     ResourceLocation questChapter = chapterStr.contains(":")

@@ -33,6 +33,7 @@ public record QuestRewardCollectPacket(ResourceLocation id, int rewardIndex,
             Questlog.LOGGER.warn("Quest {} not found", packet.id);
             return;
         }
+        if (!quest.canClaimRewards()) return;
         if (packet.rewardIndex < 0 || packet.rewardIndex >= quest.rewards.size()) return;
         Reward reward = quest.rewards.get(packet.rewardIndex);
         if (reward == null) {
