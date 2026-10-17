@@ -28,11 +28,11 @@ public final class BookSideTab extends AbstractButton {
     @Override protected void renderWidget(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float delta) {
         PoseStack pose = graphics.pose();
         pose.pushPose();
-        pose.translate(getX() + 32, getY(), 0);
+        pose.translate(getX() + 38, getY(), 0);
         pose.mulPose(new Quaternionf().rotationZ((float) Math.PI / 2));
         (selected || isHoveredOrFocused() ? QuestlogGuiSet.DEFAULT.tabMainActive : QuestlogGuiSet.DEFAULT.tabMain).blit(graphics, 0, 0);
         pose.popPose();
-        graphics.renderItem(icon, getX() + 8, getY() + 19);
+        graphics.renderItem(icon, getX() + 14, getY() + 19);
     }
 
     @Override public void onPress() { action.run(); }

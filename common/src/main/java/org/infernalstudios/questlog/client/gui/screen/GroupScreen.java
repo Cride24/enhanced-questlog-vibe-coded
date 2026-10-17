@@ -357,7 +357,7 @@ public class GroupScreen extends Screen {
             graphics.drawString(font, title, left + (PAGE_WIDTH - font.width(title)) / 2, top + 7, 0xFF4B3422, false);
             QuestlogGuiSet.DEFAULT.smallHR.blit(graphics, left - 3, top + 18);
         }
-        if (own().isEmpty() && !inspecting && !naming && !inviting) {
+        if (shareQuest == null && own().isEmpty() && !inspecting && !naming && !inviting) {
             graphics.fill(left + 3, top + 52, left + PAGE_WIDTH - 5, top + 53, 0xFFA8874A);
             for (int column = 1; column < 3; column++) {
                 int ruleX = left + COLUMNS[column];
@@ -365,7 +365,7 @@ public class GroupScreen extends Screen {
             }
         }
         if (naming) graphics.drawString(font, Component.translatable("questlog.groups.enter_name"), left + 32, top + 43, 0xFF4B3422, false);
-        if (own().isEmpty() && selected.isEmpty() && !naming && state().getList("groups", Tag.TAG_COMPOUND).isEmpty()) {
+        if (shareQuest == null && own().isEmpty() && selected.isEmpty() && !naming && state().getList("groups", Tag.TAG_COMPOUND).isEmpty()) {
             int lineY = top + 62;
             for (var line : font.split(Component.translatable("questlog.groups.none"), 224)) {
                 graphics.drawString(font, line, left + 8, lineY, 0xFF4B3422, false);
