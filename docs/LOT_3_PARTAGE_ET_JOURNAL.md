@@ -1,6 +1,6 @@
 # Lot 3 — partage des quêtes et visibilité du journal
 
-État du 12 octobre 2026, branche `codex/questlog-groupes-et-partage-1.21.1`. Implémentation prête pour des essais sur un monde de test ; **aucun essai en jeu de ce lot n'a encore été réalisé**. Le lot 4 n'est pas commencé.
+État du 18 octobre 2026, branche `codex/questlog-groupes-et-partage-1.21.1`. **Lot 3 validé par l'utilisateur** après des essais NeoForge à deux joueurs et la correction des onglets dans `3.5.1-lot3.6`. Aucun essai à trois joueurs ni essai Fabric en jeu n'est établi. Le lot 4 n'est pas commencé.
 
 ## Comportement implémenté
 
@@ -20,13 +20,18 @@
 - `common:verifyProgressPreservation` et `common:verifyAdventureGroups` repassent pour les lots 1 et 2. Le second contrôle crée volontairement des fichiers de groupe corrompus dans un dossier temporaire ; ses traces d'erreur vérifient le secours et la suspension des mutations, puis le contrôle réussit.
 - `common:verifyTrackingValidation` : 143 contrôles passent, dont l'affichage des quêtes suivies et la conservation des entrées inactives pour le mode auteur.
 - `fabric:build` et `neoforge:build` réussissent hors ligne avec `-Pversion=3.5.1-lot3.4`. Les avertissements de compilation et de configuration Gradle ne bloquent pas l'assemblage. Les JARs d'essai sont `fabric/build/libs/questlog-fabric-1.21.1-3.5.1-lot3.4.jar` et `neoforge/build/libs/questlog-neoforge-1.21.1-3.5.1-lot3.4.jar`.
+- Les corrections d'interface `3.5.1-lot3.5` et `3.5.1-lot3.6` ont chacune été compilées sur Fabric et NeoForge. Les JARs les plus récents sont `fabric/build/libs/questlog-fabric-1.21.1-3.5.1-lot3.6.jar` et `neoforge/build/libs/questlog-neoforge-1.21.1-3.5.1-lot3.6.jar`.
 - JSON français et anglais relus comme objets, nouvelles clés présentes dans les deux langues ; `git diff --check` doit rester sans erreur.
 
 Ces contrôles exercent la logique sans client ni serveur Minecraft. Ils ne prouvent pas le rendu, la livraison des messages de chat, la persistance après un vrai redémarrage ni la compatibilité d'un monde multijoueur.
 
+## Retour utilisateur en jeu
+
+Le 17 octobre, l'utilisateur a essayé le partage sur un serveur NeoForge avec deux joueurs. Il rapporte que les fonctions testées semblent correctes, mais a signalé deux défauts d'affichage : des éléments d'annuaire superposés à la sélection sans groupe et des onglets mal alignés. Le premier est corrigé dans `3.5.1-lot3.5` ; les onglets ont ensuite été ancrés au bord extérieur du cadre dans `3.5.1-lot3.6`. Le 18 octobre, l'utilisateur confirme le résultat visuel et valide le lot 3. Son retour ne détaille pas une exécution de chaque scénario ci-dessous. L'essai avec trois joueurs, notamment le tri de plusieurs groupes du lot 2, et l'essai Fabric en jeu restent ouverts.
+
 ## Essais utilisateur sur une copie jetable
 
-Employer un monde de test copié, deux joueurs A et B, idéalement un troisième C, et le même JAR `lot3.4` côté serveur et clients. Garder profils et sauvegardes personnels intacts. Faire les scénarios sur NeoForge, puis Fabric si ce chargeur est utilisé.
+Employer un monde de test copié, deux joueurs A et B, idéalement un troisième C, et le même JAR `lot3.6` côté serveur et clients. Garder profils et sauvegardes personnels intacts. Faire les scénarios restants sur NeoForge, puis Fabric si ce chargeur est utilisé.
 
 1. Créer dans l'éditeur une quête personnelle verrouillée par une quête préalable, avec un objectif non terminé, `shareable=true`, et une seconde quête du même chapitre encore verrouillée. Créer également une quête `shareable=false`, une quête répétable et un chapitre initialement sans quête visible. Vérifier que le réglage Partageable reste indépendant du groupe et que les anciennes quêtes ne montrent pas Partager.
 2. A ouvre la quête partageable. Vérifier le bouton sous le panneau gauche, la recherche et dix résultats au plus. Avec A et B dans un groupe, B doit figurer avant les joueurs proches ; chercher C éloigné ou dans une autre dimension, y compris s'il appartient déjà à un groupe. Annuler sans envoi, puis sélectionner B et Partager. Le message doit être privé, nommer A et ouvrir la fiche de B au clic.
@@ -36,4 +41,4 @@ Employer un monde de test copié, deux joueurs A et B, idéalement un troisième
 6. Envoyer `quest:NomDeLaQuete`, `quest:"Nom avec espaces"` et `quest:questlog:identifiant` dans le chat. A et B cliquent avec des droits différents : seul le joueur qui voit normalement la quête ou l'a acceptée peut l'ouvrir. Deux quêtes de même titre ne doivent pas produire un lien ambigu ; l'identifiant explicite reste utilisable. Un lien de description vers une quête cachée ne doit pas la dévoiler.
 7. Refaire brièvement les validations ciblées des lots 1 et 2 sur la copie : reset personnel sans toucher une quête voisine ; invitation, candidature et changement de groupe. L'essai de tri sur plusieurs groupes avec un troisième joueur reste ouvert pour le lot 2.
 
-Fabric n'a pas encore été testé en jeu pour les lots 2 ou 3. Les avertissements `refmap` du serveur observés avant ces lots ne constituent pas une régression démontrée. Aucun profil, monde personnel ou serveur Minecraft n'a été lancé ou modifié par cette réalisation.
+Fabric n'a pas encore été testé en jeu pour les lots 1, 2 ou 3. Les avertissements `refmap` du serveur observés avant ces lots ne constituent pas une régression démontrée. L'agent n'a lancé aucun profil, monde personnel ou serveur Minecraft et n'a modifié aucun fichier de ces installations.
