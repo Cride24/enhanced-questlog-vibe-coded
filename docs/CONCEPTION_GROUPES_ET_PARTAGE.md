@@ -133,6 +133,15 @@ La confirmation de départ explique :
 
 Elle propose « Quitter le groupe » et « Annuler ». La confirmation d'expulsion explique au chef les mêmes conséquences pour le membre et le groupe.
 
+### Affichage des objectifs dans le suivi
+
+À réaliser dans le lot 4, pour les quêtes personnelles comme pour les quêtes de groupe :
+
+- La première quête de la liste de suivi affiche ses objectifs sous son titre, à raison d'une ligne par objectif.
+- Chaque ligne présente le texte de l'objectif sans logo, avec une case vide tant que l'objectif n'est pas rempli et cochée lorsqu'il est validé. Cette case indique l'état calculé par le jeu ; elle ne permet pas de valider manuellement l'objectif.
+- Les autres quêtes suivies conservent leur affichage compact. Lorsque la première quête change, les objectifs affichés sont ceux de la nouvelle première quête.
+- Le suivi conserve le design, l'ordre, le défilement et les réglages existants. Les objectifs reflètent la progression personnelle ou collective applicable à la quête.
+
 ## 5. Validation
 
 - La validation est automatique lorsque tous les objectifs sont remplis, en l'absence d'échec.
@@ -303,6 +312,10 @@ Le chef reçoit des notifications privées pour les nouvelles candidatures, leur
 ## 10. Préparation et vérification du développement
 
 Utiliser ce document comme référence commune aux discussions de réalisation. Chaque lot comprend l'adaptation de l'interface au design actuel, la conservation des données et des vérifications ciblées.
+
+Au 18 octobre 2026, les lots 1, 2 et 3 sont validés par l'utilisateur. Les réalisations, vérifications et limites sont consignées dans [LOT_1_PROGRESSION_ET_RESET.md](LOT_1_PROGRESSION_ET_RESET.md), [LOT_2_GROUPES_ET_INTERFACE.md](LOT_2_GROUPES_ET_INTERFACE.md) et [LOT_3_PARTAGE_ET_JOURNAL.md](LOT_3_PARTAGE_ET_JOURNAL.md). Les essais rapportés concernent NeoForge ; Fabric reste à tester en jeu, ainsi que le tri de plusieurs groupes avec au moins un troisième joueur. La validation utilisateur ne signifie pas que chaque scénario des protocoles a été exécuté.
+
+Le prochain lot est le lot 4, « Participants et progression », incluant l'affichage des objectifs de la première quête suivie. Son développement est autorisé dans une discussion séparée sur la branche `codex/questlog-groupes-et-partage-1.21.1`, à partir du commit publiant cette mise à jour de conception.
 
 Les domaines de travail sont : groupes et interface, partage et journal, objectifs et progression, récompenses, références de chat, accomplissement mondial et annonces. Leur ordre technique dépend des mécanismes existants à réutiliser.
 
