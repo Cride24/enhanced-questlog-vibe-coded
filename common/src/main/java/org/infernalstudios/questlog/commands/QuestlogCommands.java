@@ -267,8 +267,11 @@ public class QuestlogCommands {
 
             for (Quest quest : affectedQuests) {
                 if (complete) {
-                    quest.objectives.forEach(obj -> obj.forceSetUnits(obj.getRequiredAmount()));
-                    quest.failureConditions.forEach(obj -> obj.forceSetUnits(0)); // clear fails if force completed
+                    if (quest.isGroupQuest()) completeGroupQuestForAdmin(quest, player);
+                    else {
+                        quest.objectives.forEach(obj -> obj.forceSetUnits(obj.getRequiredAmount()));
+                        quest.failureConditions.forEach(obj -> obj.forceSetUnits(0)); // clear fails if force completed
+                    }
                 } else {
                     quest.resetProgress(quest.isGlobal());
                 }
@@ -341,8 +344,11 @@ public class QuestlogCommands {
         for (ServerPlayer player : players) {
             QuestManager manager = ServerPlayerManager.INSTANCE.getManagerByPlayer(player);
             for (Quest quest : manager.getAllQuests()) {
-                quest.objectives.forEach(obj -> obj.forceSetUnits(obj.getRequiredAmount()));
-                quest.failureConditions.forEach(obj -> obj.forceSetUnits(0));
+                if (quest.isGroupQuest()) completeGroupQuestForAdmin(quest, player);
+                else {
+                    quest.objectives.forEach(obj -> obj.forceSetUnits(obj.getRequiredAmount()));
+                    quest.failureConditions.forEach(obj -> obj.forceSetUnits(0));
+                }
             }
             ServerPlayerManager.INSTANCE.save(manager);
             ServerPlayerManager.INSTANCE.syncPlayer(manager);
@@ -350,6 +356,15 @@ public class QuestlogCommands {
 
         ctx.getSource().sendSuccess(() -> Component.literal("Successfully completed all quests for " + players.size() + " player(s)."), true);
         return players.size();
+    }
+
+    private static void completeGroupQuestForAdmin(Quest quest, ServerPlayer player) {
+        if (!quest.isTriggered() || quest.hasSentCompletion) return;
+        quest.hasSentCompletion = true;
+        org.infernalstudios.questlog.QuestlogEvents.onQuestCompleted(
+                new org.infernalstudios.questlog.event.events.QuestEvent.Completed(player, quest, true));
+        if (quest.isGlobal()) ServerPlayerManager.INSTANCE.onGlobalQuestUpdated(quest);
+        quest.markForUpdate();
     }
 
     private static List<Quest> getTargetQuests(QuestManager manager, String target) {

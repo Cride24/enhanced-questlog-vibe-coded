@@ -15,6 +15,8 @@ public abstract class Objective implements NbtSaveable, WithDisplayData<Objectiv
     private final int requiredAmount;
     private Quest parent;
     private int units;
+    private long collectiveUnits = -1;
+    private long collectiveRequired = -1;
     private boolean isPartOfPrerequisites = false;
 
     public Objective(JsonObject definition) {
@@ -42,7 +44,30 @@ public abstract class Objective implements NbtSaveable, WithDisplayData<Objectiv
     }
 
     public int getUnits() {
-        return this.units;
+        return this.collectiveUnits >= 0 ? (int) Math.min(Integer.MAX_VALUE, this.collectiveUnits) : this.units;
+    }
+
+    public int getPersonalUnits() { return this.units; }
+    public boolean hasCollectiveProgress() { return this.collectiveUnits >= 0; }
+
+    public void addUnits(int amount) {
+        if (amount <= 0) return;
+        setUnits((int) Math.min(Integer.MAX_VALUE, (long) this.units + amount));
+    }
+
+    public void setCollectiveProgress(long units, long required) {
+        this.collectiveUnits = Math.max(0, units);
+        this.collectiveRequired = Math.max(1, required);
+    }
+
+    public void clearCollectiveProgress() {
+        this.collectiveUnits = -1;
+        this.collectiveRequired = -1;
+    }
+
+    public boolean canRecordMore() {
+        return this.parent != null && !this.parent.hasSentCompletion
+                && (this.parent.isGroupQuest() && this.parent.isProgressObjective(this) || !this.isCompleted());
     }
 
     public void setUnits(int units) {
@@ -51,18 +76,26 @@ public abstract class Objective implements NbtSaveable, WithDisplayData<Objectiv
             return;
         }
 
-        this.units = Math.min(units, this.requiredAmount);
+        int previous = this.units;
+        this.units = Math.max(0, this.parent != null && this.parent.isGroupQuest()
+                && this.parent.isProgressObjective(this) ? units : Math.min(units, this.requiredAmount));
+        if (this.units > previous && this.parent != null && this.parent.isProgressObjective(this))
+            this.parent.onNewContribution();
         if (this.getParent() != null) {
             this.getParent().markForUpdate();
         }
     }
 
     public int getRequiredAmount() {
-        return this.requiredAmount;
+        return this.collectiveRequired >= 0 ? (int) Math.min(Integer.MAX_VALUE, this.collectiveRequired) : this.requiredAmount;
     }
+    public long getDisplayedUnits() { return this.collectiveUnits >= 0 ? this.collectiveUnits : this.units; }
+    public long getDisplayedRequiredAmount() { return this.collectiveRequired >= 0 ? this.collectiveRequired : this.requiredAmount; }
+    public int getBaseRequiredAmount() { return this.requiredAmount; }
 
     public boolean isCompleted() {
-        return this.units >= this.requiredAmount;
+        return this.collectiveRequired >= 0 ? this.collectiveUnits >= this.collectiveRequired
+                : this.getUnits() >= this.getRequiredAmount();
     }
 
     public boolean isHidden() {
@@ -82,12 +115,17 @@ public abstract class Objective implements NbtSaveable, WithDisplayData<Objectiv
     @Override
     public void deserialize(CompoundTag data) {
         this.units = data.getInt("units");
+        boolean client = this.parent != null && this.parent.manager.isClient();
+        this.collectiveUnits = client && data.contains("collective_units") ? data.getLong("collective_units") : -1;
+        this.collectiveRequired = client && data.contains("collective_required") ? data.getLong("collective_required") : -1;
     }
 
     @Override
     public CompoundTag serialize() {
         CompoundTag tag = new CompoundTag();
         tag.putInt("units", this.units);
+        if (this.collectiveUnits >= 0) tag.putLong("collective_units", this.collectiveUnits);
+        if (this.collectiveRequired >= 0) tag.putLong("collective_required", this.collectiveRequired);
         return tag;
     }
 
@@ -96,7 +134,7 @@ public abstract class Objective implements NbtSaveable, WithDisplayData<Objectiv
     }
 
     public void forceSetUnits(int units) {
-        this.units = Math.min(units, this.requiredAmount);
+        this.units = Math.max(0, Math.min(units, this.requiredAmount));
         if (this.getParent() != null) {
             this.getParent().markForUpdate();
         }

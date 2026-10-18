@@ -18,11 +18,11 @@ public class ItemCraftObjective extends AbstractItemObjective {
     }
 
     private void onItemCraft(TriggerPlayerEvent.Craft event) {
-        if (this.isCompleted() || this.getParent() == null) return;
+        if (!this.canRecordMore()) return;
         if (
                 event.player instanceof ServerPlayer player && this.getParent().manager.player.equals(player) && this.test(event.outputItem)
         ) {
-            this.setUnits(this.getUnits() + event.outputItem.getCount());
+            this.addUnits(event.outputItem.getCount());
         }
     }
 }

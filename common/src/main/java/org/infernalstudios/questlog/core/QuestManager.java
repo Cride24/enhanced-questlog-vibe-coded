@@ -181,6 +181,11 @@ public class QuestManager {
      * @param id The ID of the quest to be synced.
      */
     public void sync(ResourceLocation id) {
+        if (GroupProgress.refresh(this.quests.get(id))) return;
+        syncIndividual(id);
+    }
+
+    void syncIndividual(ResourceLocation id) {
         if (!this.isClient() && this.player instanceof ServerPlayer) {
             Questlog.LOGGER.trace("Syncing quest data for {} to client", id);
             if (this.tracking.prune(this)) {
@@ -211,7 +216,7 @@ public class QuestManager {
                     Questlog.LOGGER.trace("Sent quest triggered event for {}", id);
                 }
 
-                if (!quest.hasSentCompletion && quest.isCompleted()) {
+                if (!quest.isGroupQuest() && !quest.hasSentCompletion && quest.isCompleted()) {
                     quest.hasSentCompletion = true;
                     QuestlogEvents.onQuestCompleted(new QuestEvent.Completed(this.player, quest, true));
                     Questlog.LOGGER.trace("Sent quest completed event for {}", id);

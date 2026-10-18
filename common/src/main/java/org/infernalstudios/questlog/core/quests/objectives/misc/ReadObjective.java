@@ -18,9 +18,9 @@ public class ReadObjective extends Objective {
     }
 
     private void onQuestRead(QuestEvent.Read event) {
-        if (this.isCompleted() || this.getParent() == null) return;
+        if (!this.canRecordMore()) return;
         if (event.player.equals(this.getParent().manager.player) && event.quest.getId().equals(this.getParent().getId())) {
-            this.setUnits(this.getUnits() + 1);
+            this.addUnits(1);
         }
     }
 

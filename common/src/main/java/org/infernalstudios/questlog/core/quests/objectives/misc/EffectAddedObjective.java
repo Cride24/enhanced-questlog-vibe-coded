@@ -32,12 +32,12 @@ public class EffectAddedObjective extends Objective {
     }
 
     private void onEffectAdded(TriggerEntityEvent.EffectAdded event) {
-        if (this.isCompleted() || this.getParent() == null) return;
+        if (!this.canRecordMore()) return;
         if (event.entity instanceof ServerPlayer player && this.getParent().manager.player.equals(player)) {
             MobEffect eventEffect = event.effect.getEffect().value();
             if ((this.effect.get() != null && eventEffect.equals(this.effect.get())) ||
                     (this.effectId != null && this.effectId.equals(BuiltInRegistries.MOB_EFFECT.getKey(eventEffect)))) {
-                this.setUnits(this.getUnits() + 1);
+                this.addUnits(1);
             }
         }
     }

@@ -345,7 +345,7 @@ public class QuestDetails extends Screen implements NarrationSupplier {
         int leftWidth = this.getDisplay().getLeftPanelWidth();
         int rightWidth = this.getDisplay().getRightPanelWidth();
         int height = this.getDisplay().getPanelHeight();
-        int globalOffset = this.quest.isGlobal() ? 6 : 0;
+        int globalOffset = (this.quest.isGlobal() ? 6 : 0) + (this.quest.isGroupQuest() ? 10 : 0);
 
         this.description = new ScrollableComponent(
                 this.panel1X + CONTENT_X,
@@ -523,10 +523,15 @@ public class QuestDetails extends Screen implements NarrationSupplier {
 
     private void renderTitle(GuiGraphics ps) {
         QuestDisplayData display = this.getDisplay();
-        int titleY = TITLE_Y + (this.quest.isGlobal() ? 6 : 0);
+        int titleY = TITLE_Y + (this.quest.isGlobal() ? 6 : 0) + (this.quest.isGroupQuest() ? 10 : 0);
         if (this.quest.isGlobal()) {
             ps.drawString(this.font, Component.translatable("questlog.quest.global"),
                     this.panel1X + CONTENT_X, this.panel1Y + 10, this.getPalette().textColor(), false);
+        }
+        if (this.quest.isGroupQuest()) {
+            ps.drawString(this.font, Component.translatable("questlog.quest.participants", this.quest.getParticipantCount()),
+                    this.panel1X + CONTENT_X, this.panel1Y + 10 + (this.quest.isGlobal() ? 10 : 0),
+                    this.getPalette().textColor(), false);
         }
         int iconWidth = display.getIcon() != null ? display.getIcon().width() + 4 : 0;
         int textWidth = this.titleLines.stream().mapToInt(this.font::width).max().orElse(0);

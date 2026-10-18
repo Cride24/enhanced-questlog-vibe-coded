@@ -18,13 +18,13 @@ public class ItemDropObjective extends AbstractItemObjective {
     }
 
     private void onItemDrop(TriggerEntityEvent.TossItem event) {
-        if (this.isCompleted() || this.getParent() == null) return;
+        if (!this.canRecordMore()) return;
         if (
                 event.entity instanceof ServerPlayer player &&
                         this.getParent().manager.player.equals(player) &&
                         this.test(event.item)
         ) {
-            this.setUnits(this.getUnits() + event.item.getCount());
+            this.addUnits(event.item.getCount());
         }
     }
 }

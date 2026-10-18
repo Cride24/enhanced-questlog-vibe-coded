@@ -117,6 +117,12 @@ public final class TrackingValidationVerification {
         check(QuestValidation.inspect(json("{\"objectives\":[{\"type\":\"visit_position\",\"bounds\":{\"x\":1,\"y\":2,\"z\":3}}]}"),refs).functional(), "Position coordinate object supported");
 
         TrackingWindow window=new TrackingWindow(10,10,200,140);
+        check(TrackingWindow.rowHeight(0,2)==52 && TrackingWindow.rowTop(1,2)==52
+                && TrackingWindow.rowTop(2,2)==80, "Only the true first tracked quest reserves objective lines");
+        check(TrackingWindow.indexAt(40,3,2)==0 && TrackingWindow.indexAt(52,3,2)==1
+                && TrackingWindow.indexAt(80,3,2)==2, "Clicks follow expanded and compact row bounds");
+        check(TrackingWindow.indexAt(30+30,3,2)==1 && TrackingWindow.rowTop(1,0)==28,
+                "Pixel scrolling and changing the first quest update row geometry");
         check(!window.begin(50,60), "Body is reserved for rows, not window movement");
         check(window.begin(50,20), "Header starts movement"); window.drag(500,500,320,200); window.end();
         check(window.x==120 && window.y==60, "Window remains on screen");

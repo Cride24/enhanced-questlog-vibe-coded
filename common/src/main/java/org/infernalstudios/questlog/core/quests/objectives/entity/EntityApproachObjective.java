@@ -23,10 +23,10 @@ public class EntityApproachObjective extends AbstractEntityObjective {
     }
 
     private void onPlayerMove(TriggerPlayerEvent.Tick event) {
-        if (this.isCompleted() || this.getParent() == null) return;
+        if (!this.canRecordMore()) return;
         if (event.player instanceof ServerPlayer player && this.getParent().manager.player.equals(player) && --ticksUntilCheck <= 0) {
             if (!event.player.level().getEntities((Entity) null, event.player.getBoundingBox().inflate(this.range), this::test).isEmpty()) {
-                this.setUnits(this.getUnits() + 1);
+                this.addUnits(1);
             }
             ticksUntilCheck = 20;
         }

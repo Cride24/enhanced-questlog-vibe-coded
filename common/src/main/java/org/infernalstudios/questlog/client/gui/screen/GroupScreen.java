@@ -344,8 +344,9 @@ public class GroupScreen extends Screen {
         minecraft.setScreen(new ConfirmScreen(yes -> {
             minecraft.setScreen(this);
             if (yes) action.run();
-        }, Component.translatable("questlog.groups." + kind),
-                Component.translatable("questlog.groups.confirm.personal")));
+          }, Component.translatable("questlog.groups." + kind),
+                Component.translatable("questlog.groups.confirm." + kind),
+                Component.translatable("questlog.groups." + kind), Component.translatable("gui.cancel")));
     }
 
     @Override public void renderBackground(@NotNull GuiGraphics graphics, int x, int y, float delta) {

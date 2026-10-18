@@ -42,6 +42,19 @@ public final class TrackingReorder {
         targetIndex = Math.max(first, Math.min(last, targetIndex));
         double targetCenter = contentTop + (targetIndex - firstVisible) * rowHeight + rowHeight / 2.0;
         boolean after = center > targetCenter || center == targetCenter && targetIndex > sourceIndex;
+        return moveToIndex(rows, targetIndex, after);
+    }
+
+    public boolean moveToIndex(List<Quest> rows, int targetIndex, boolean after) {
+        if (!active() || rows.isEmpty()) return false;
+        int sourceIndex = -1;
+        for (int i = 0; i < rows.size(); i++) if (rows.get(i).getId().equals(source)) { sourceIndex = i; break; }
+        if (sourceIndex < 0) return false;
+        Quest quest = rows.get(sourceIndex);
+        int first = sourceIndex, last = sourceIndex;
+        while (first > 0 && sameGroup(quest, rows.get(first - 1))) first--;
+        while (last + 1 < rows.size() && sameGroup(quest, rows.get(last + 1))) last++;
+        targetIndex = Math.max(first, Math.min(last, targetIndex));
         return preview.reorder(source, rows.get(targetIndex).getId(), after);
     }
 

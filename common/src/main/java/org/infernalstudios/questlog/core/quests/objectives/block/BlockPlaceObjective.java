@@ -17,9 +17,9 @@ public class BlockPlaceObjective extends AbstractBlockObjective {
     }
 
     private void onBlockPlace(TriggerBlockEvent.Place event) {
-        if (this.isCompleted() || this.getParent() == null) return;
+        if (!this.canRecordMore()) return;
         if (event.entity instanceof ServerPlayer player && this.getParent().manager.player.equals(player) && this.test(event.state)) {
-            this.setUnits(this.getUnits() + 1);
+            this.addUnits(1);
         }
     }
 }

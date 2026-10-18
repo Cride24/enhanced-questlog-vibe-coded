@@ -30,14 +30,14 @@ public class OriginObjective extends Objective {
     }
 
     private void onPlayerTick(TriggerPlayerEvent.Tick event) {
-        if (this.isCompleted() || this.getParent() == null) return;
+        if (!this.canRecordMore()) return;
 
         if (event.player instanceof ServerPlayer player
                 && this.getParent().manager.player.equals(player)
                 && --ticksUntilCheck <= 0) {
 
             if (OriginsHelper.hasOrigin(player, this.origin)) {
-                this.setUnits(this.getRequiredAmount());
+                this.setUnits(this.getBaseRequiredAmount());
             }
 
             ticksUntilCheck = 100;

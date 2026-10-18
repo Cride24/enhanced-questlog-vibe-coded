@@ -188,8 +188,8 @@ public class ObjectiveDisplayData {
 
         return this.isCompleted()
                 ? Component.translatable("questlog.objective.completed")
-                : this.objective.getRequiredAmount() > 1
-                ? Component.translatable("questlog.objective.in_progress", this.objective.getUnits(), this.objective.getRequiredAmount())
+                : this.objective.getDisplayedRequiredAmount() > 1
+                ? Component.translatable("questlog.objective.in_progress", this.objective.getDisplayedUnits(), this.objective.getDisplayedRequiredAmount())
                 : Component.translatable("questlog.objective.in_progress_singular");
     }
 

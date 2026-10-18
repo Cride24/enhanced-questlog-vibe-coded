@@ -17,12 +17,12 @@ public class EntityBreedObjective extends AbstractEntityObjective {
     }
 
     private void onEntityBreed(TriggerEntityEvent.Breed event) {
-        if (this.isCompleted() || this.getParent() == null) return;
+        if (!this.canRecordMore()) return;
         if (event.causedByPlayer instanceof ServerPlayer player &&
                 this.getParent().manager.player.equals(player) &&
                 (this.test(event.parentA) || this.test(event.parentB))
         ) {
-            this.setUnits(this.getUnits() + 1);
+            this.addUnits(1);
         }
     }
 }

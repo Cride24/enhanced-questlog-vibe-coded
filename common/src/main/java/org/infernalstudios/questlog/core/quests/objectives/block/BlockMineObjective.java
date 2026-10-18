@@ -43,14 +43,14 @@ public class BlockMineObjective extends AbstractBlockObjective {
     }
 
     private void onBlockDestroy(TriggerBlockEvent.Break event) {
-        if (this.isCompleted() || this.getParent() == null) return;
+        if (!this.canRecordMore()) return;
         if (
                 event.entity instanceof ServerPlayer player &&
                         this.getParent().manager.player.equals(player) &&
                         this.test(event.state) &&
                         this.testItem(player.getItemInHand(InteractionHand.MAIN_HAND))
         ) {
-            this.setUnits(this.getUnits() + 1);
+            this.addUnits(1);
         }
     }
 }

@@ -1,6 +1,6 @@
 # Lot 3 — partage des quêtes et visibilité du journal
 
-État du 18 octobre 2026, branche `codex/questlog-groupes-et-partage-1.21.1`. **Lot 3 validé par l'utilisateur** après des essais NeoForge à deux joueurs et la correction des onglets dans `3.5.1-lot3.6`. Aucun essai à trois joueurs ni essai Fabric en jeu n'est établi. Le lot 4 n'est pas commencé.
+État du 18 octobre 2026, branche `codex/questlog-groupes-et-partage-1.21.1`. **Lot 3 validé par l'utilisateur** après des essais NeoForge à deux joueurs et la correction des onglets dans `3.5.1-lot3.6`. Aucun essai à trois joueurs ni essai Fabric en jeu n'est établi. Le développement du lot 4 est décrit dans `LOT_4_PROGRESSION_COLLECTIVE_ET_SUIVI.md`.
 
 ## Comportement implémenté
 

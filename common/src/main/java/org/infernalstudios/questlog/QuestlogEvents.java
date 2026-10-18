@@ -8,6 +8,7 @@ import net.minecraft.server.level.ServerPlayer;
 import org.infernalstudios.questlog.commands.QuestlogCommands;
 import org.infernalstudios.questlog.core.DefinitionUtil;
 import org.infernalstudios.questlog.core.AdventureGroups;
+import org.infernalstudios.questlog.core.GroupProgress;
 import org.infernalstudios.questlog.core.QuestManager;
 import org.infernalstudios.questlog.core.ServerPlayerManager;
 import org.infernalstudios.questlog.core.quests.rewards.Reward;
@@ -25,6 +26,7 @@ public class QuestlogEvents {
         ServerPlayerManager.INSTANCE = new ServerPlayerManager(server);
         ServerPlayerManager.INSTANCE.load();
         AdventureGroups.INSTANCE = new AdventureGroups(server);
+        GroupProgress.refreshAll();
     }
 
     public static void onPlayerSave(ServerPlayer player) {
@@ -51,6 +53,16 @@ public class QuestlogEvents {
         QuestManager manager = ServerPlayerManager.INSTANCE.getManagerByPlayer(player);
         ServerPlayerManager.INSTANCE.load(manager);
         if (AdventureGroups.INSTANCE != null) AdventureGroups.INSTANCE.onLogin(player);
+        GroupProgress.refreshAll();
+        boolean claimedOfflineReward = false;
+        for (var quest : manager.getAllQuests()) {
+            if (!quest.isGroupQuest() || !quest.hasSentCompletion || !quest.canClaimRewards()) continue;
+            for (Reward reward : quest.rewards) if (reward.isAutoClaim() && !reward.hasRewarded()) {
+                reward.applyReward(player);
+                claimedOfflineReward = true;
+            }
+        }
+        if (claimedOfflineReward) ServerPlayerManager.INSTANCE.save(manager);
 
         if (QuestlogMigrator.showDatapackWarning && player.hasPermissions(2)) {
             player.sendSystemMessage(Component.literal("§e[Questlog] Warning: Quests are now loaded from the config folder. Datapacks are no longer supported! Your old datapack quests were automatically migrated."));

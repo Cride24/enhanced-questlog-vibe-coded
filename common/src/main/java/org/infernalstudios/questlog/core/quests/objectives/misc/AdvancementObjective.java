@@ -26,14 +26,14 @@ public class AdvancementObjective extends Objective {
     }
 
     private void onPlayerTick(TriggerPlayerEvent.Tick event) {
-        if (this.isCompleted() || this.getParent() == null) return;
+        if (!this.canRecordMore()) return;
 
         // Check once per second (20 ticks) to maintain performance
         if (event.player instanceof ServerPlayer player && this.getParent().manager.player.equals(player) && --ticksUntilCheck <= 0) {
             AdvancementHolder advancementNode = player.getServer().getAdvancements().get(this.advancement);
 
             if (advancementNode != null && player.getAdvancements().getOrStartProgress(advancementNode).isDone()) {
-                this.setUnits(this.getUnits() + 1);
+                this.addUnits(1);
             }
 
             ticksUntilCheck = 20;

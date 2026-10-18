@@ -18,9 +18,9 @@ public class ItemUseObjective extends AbstractItemObjective {
     }
 
     private void onItemUse(TriggerEntityEvent.UseItem event) {
-        if (this.isCompleted() || this.getParent() == null) return;
+        if (!this.canRecordMore()) return;
         if (event.entity instanceof ServerPlayer player && this.getParent().manager.player.equals(player) && this.test(event.item)) {
-            this.setUnits(this.getUnits() + 1);
+            this.addUnits(1);
         }
     }
 }

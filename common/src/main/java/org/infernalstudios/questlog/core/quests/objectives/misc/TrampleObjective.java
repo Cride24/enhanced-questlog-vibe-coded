@@ -19,9 +19,9 @@ public class TrampleObjective extends Objective {
     }
 
     private void onBlockTrample(TriggerBlockEvent.FarmlandTrample event) {
-        if (this.isCompleted() || this.getParent() == null) return;
+        if (!this.canRecordMore()) return;
         if (event.entity instanceof ServerPlayer player && this.getParent().manager.player.equals(player)) {
-            this.setUnits(this.getUnits() + 1);
+            this.addUnits(1);
         }
     }
 }

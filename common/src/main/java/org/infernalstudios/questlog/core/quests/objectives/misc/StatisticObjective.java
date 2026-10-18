@@ -37,14 +37,14 @@ public class StatisticObjective extends Objective {
     }
 
     private void onPlayerTick(TriggerPlayerEvent.Tick event) {
-        if (this.isCompleted() || this.getParent() == null) return;
+        if (!this.canRecordMore()) return;
 
         if (event.player instanceof ServerPlayer player && player == this.getParent().manager.player && --ticksUntilCheck <= 0) {
             int currentStatValue = this.getStatValue();
 
             int progress = this.retroactive ? currentStatValue : Math.max(0, currentStatValue - this.statAtStart);
 
-            if (progress > this.getUnits()) {
+            if (progress > this.getPersonalUnits()) {
                 this.setUnits(progress);
             }
             ticksUntilCheck = 20;

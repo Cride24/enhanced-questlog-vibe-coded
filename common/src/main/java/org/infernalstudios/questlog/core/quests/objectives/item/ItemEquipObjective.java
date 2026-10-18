@@ -50,16 +50,16 @@ public class ItemEquipObjective extends AbstractItemObjective {
     }
 
     private void onPlayerTick(TriggerPlayerEvent.Tick event) {
-        if (this.isCompleted() || this.getParent() == null) return;
+        if (!this.canRecordMore()) return;
         if (event.player instanceof ServerPlayer player && this.getParent().manager.player.equals(player) && --ticksUntilCheck <= 0) {
             if (this.slot != null) {
                 if (this.test(player.getItemBySlot(this.slot))) {
-                    this.setUnits(this.getUnits() + 1);
+                    this.addUnits(1);
                 }
             } else {
                 for (EquipmentSlot s : EquipmentSlot.values()) {
                     if (this.test(player.getItemBySlot(s))) {
-                        this.setUnits(this.getUnits() + 1);
+                        this.addUnits(1);
                         break;
                     }
                 }

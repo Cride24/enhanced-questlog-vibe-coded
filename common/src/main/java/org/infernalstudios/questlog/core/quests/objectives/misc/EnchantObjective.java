@@ -47,7 +47,7 @@ public class EnchantObjective extends Objective {
     }
 
     private void onItemEnchanted(TriggerPlayerEvent.Enchant event) {
-        if (this.isCompleted() || this.getParent() == null) return;
+        if (!this.canRecordMore()) return;
         if (
                 event.player instanceof ServerPlayer player &&
                         player.equals(this.getParent().manager.player) &&
@@ -55,7 +55,7 @@ public class EnchantObjective extends Objective {
         ) {
             for (var entry : EnchantmentHelper.getEnchantmentsForCrafting(event.item).entrySet()) {
                 if (entry.getIntValue() >= this.level && areEnchantmentsEqual(entry.getKey())) {
-                    this.setUnits(this.getUnits() + 1);
+                    this.addUnits(1);
                     return;
                 }
             }

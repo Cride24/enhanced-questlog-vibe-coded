@@ -212,6 +212,7 @@ public final class AdventureGroups {
             return;
         }
         for (ServerPlayer player : server.getPlayerList().getPlayers()) sync(player, "");
+        GroupProgress.refreshAll();
     }
 
     public void onLogin(ServerPlayer player) {

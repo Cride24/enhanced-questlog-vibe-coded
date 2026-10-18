@@ -88,6 +88,8 @@ public class QuestEditorScreen extends Screen {
             new BoolFieldDef("disable_details_button", false, "Details Disabled", "questlog.editor.tooltip.details_disabled"),
             new BoolFieldDef("repeatable", false, "Repeatable", "questlog.editor.tooltip.repeatable"),
             new BoolFieldDef("shareable", false, "Shareable", "questlog.editor.tooltip.shareable"),
+            new BoolFieldDef("group_quest", false, "Group Quest", "questlog.editor.tooltip.group_quest"),
+            new BoolFieldDef("per_participant", false, "Per Participant", "questlog.editor.tooltip.per_participant"),
             new BoolFieldDef("global", false, "Global", "questlog.editor.tooltip.global"),
             new BoolFieldDef("translatable", false, "Translatable", "questlog.editor.tooltip.advanced.translatable"),
             new BoolFieldDef("toast_on_unlock", true, "Toast On Unlock", "questlog.editor.tooltip.advanced.toast_on_unlock"),
@@ -715,10 +717,16 @@ public class QuestEditorScreen extends Screen {
         for (BoolFieldDef def : BOOL_FIELDS) {
             boolean defaultVal = getBoolDefault(def);
             boolean current = this.tempBooleans.getOrDefault(def.key(), defaultVal);
-            String label = def.key().equals("shareable") ? Component.translatable("questlog.editor.shareable").getString() : def.label();
+            String label = java.util.Set.of("shareable", "group_quest", "per_participant").contains(def.key())
+                    ? Component.translatable("questlog.editor." + def.key()).getString() : def.label();
             Button toggle = Button.builder(Component.literal(label + ": " + (current ? "True" : "False")), btn -> {
                 boolean next = !this.tempBooleans.getOrDefault(def.key(), defaultVal);
+                if (def.key().equals("per_participant") && next && !this.tempBooleans.getOrDefault("group_quest", false)) return;
                 this.tempBooleans.put(def.key(), next);
+                if (def.key().equals("group_quest") && !next) {
+                    this.tempBooleans.put("per_participant", false);
+                    this.rebuildWidgets();
+                }
                 btn.setMessage(Component.literal(label + ": " + (next ? "True" : "False")));
             }).bounds(0, 0, 107, 16).build();
             if (def.tooltipKey() != null) {

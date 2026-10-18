@@ -23,7 +23,7 @@ public final class TrackedQuestsOverlay {
     private static TrackingWindow window;
     private static int scroll;
     private static final TrackingReorder reorder = new TrackingReorder();
-    private static final int HEADER=TrackingWindow.HEADER, BORDER=TrackingWindow.BORDER, ROW=28;
+    private static final int HEADER=TrackingWindow.HEADER, BORDER=TrackingWindow.BORDER, ROW=TrackingWindow.ROW;
     private static org.infernalstudios.questlog.util.texture.NineSliceTexture panel;
     private static boolean authorMode;
     private static final org.infernalstudios.questlog.core.quests.display.Palette PALETTE = new org.infernalstudios.questlog.core.quests.display.Palette(null,null,null,null,null);
@@ -85,9 +85,21 @@ public final class TrackedQuestsOverlay {
             window=new TrackingWindow(config.x,config.y,config.width,config.height);
         }
         window.clamp(mc.getWindow().getGuiScaledWidth(), mc.getWindow().getGuiScaledHeight() - (mc.screen instanceof ChatScreen ? 30 : 0));
-        scroll=Math.max(0, Math.min(scroll, Math.max(0,rows.size()-capacity())));
+        scroll=Math.max(0, Math.min(scroll, Math.max(0,totalHeight()-viewportHeight())));
     }
-    private static int capacity() { return Math.max(1,(window.height-HEADER-BORDER)/ROW); }
+    private static int viewportHeight() { return window.height-HEADER-BORDER; }
+    private static int firstObjectives() { return rows.isEmpty() ? 0 : rows.getFirst().objectives.size(); }
+    private static int rowHeight(int index) { return TrackingWindow.rowHeight(index,firstObjectives()); }
+    private static int rowTop(int index) { return TrackingWindow.rowTop(index,firstObjectives()); }
+    private static int totalHeight() { return rowTop(rows.size()); }
+    private static int firstVisible() {
+        for (int i=0;i<rows.size();i++) if (rowTop(i)+rowHeight(i)>scroll) return i;
+        return Math.max(0,rows.size()-1);
+    }
+    private static int lastVisible() {
+        for (int i=rows.size()-1;i>=0;i--) if (rowTop(i)<scroll+viewportHeight()) return i;
+        return 0;
+    }
     public static void render(GuiGraphics graphics, int mouseX, int mouseY) {
         if (!available()) { tick(); return; }
         refresh(); if (rows.isEmpty()) return;
@@ -115,36 +127,38 @@ public final class TrackedQuestsOverlay {
         }
         finally { com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1,1,1,1); }
         var palette = PALETTE;
-        String count = rows.size()>capacity() ? (scroll+1)+"–"+Math.min(rows.size(),scroll+capacity())+"/"+rows.size() : "";
+        String count = totalHeight()>viewportHeight() ? (firstVisible()+1)+"–"+(lastVisible()+1)+"/"+rows.size() : "";
         int countWidth = font.width(count);
         graphics.drawString(font, font.plainSubstrByWidth(Component.translatable("questlog.tracking.title").getString(), Math.max(0,window.width-24-(count.isEmpty()?0:countWidth+6))),window.x+12,window.y+10,palette.titleColor(),false);
         if (!count.isEmpty()) graphics.drawString(font,count,window.x+window.width-12-countWidth,window.y+10,palette.textColor(),false);
         graphics.enableScissor(window.x+BORDER,window.y+HEADER,window.x+window.width-BORDER,window.y+window.height-BORDER);
-        for (int index=scroll; index<Math.min(rows.size(),scroll+capacity());index++) {
+        for (int index=firstVisible(); index<=lastVisible();index++) {
             Quest quest=rows.get(index);
-            int y=window.y+HEADER+(index-scroll)*ROW;
+            int y=window.y+HEADER+rowTop(index)-scroll;
+            int height=rowHeight(index);
             if (reorder.active() && quest.getId().equals(reorder.source())) {
-                graphics.fill(window.x+BORDER,y,window.x+window.width-BORDER,y+ROW,0x226D4C27);
+                graphics.fill(window.x+BORDER,y,window.x+window.width-BORDER,y+height,0x226D4C27);
                 continue;
             }
-            boolean hovered=interactive && !reorder.active() && mouseX>=window.x+BORDER && mouseX<window.x+window.width-BORDER && mouseY>=y && mouseY<y+ROW;
-            renderRow(graphics,quest,y,hovered);
+            boolean hovered=interactive && !reorder.active() && mouseX>=window.x+BORDER && mouseX<window.x+window.width-BORDER && mouseY>=y && mouseY<y+height;
+            renderRow(graphics,quest,y,height,hovered,index==0);
         }
         if (interactive && reorder.active()) {
             Quest quest=QuestlogClient.getLocal().getQuest(reorder.source());
             if (quest != null) {
                 int y=(int)floatingTop(mouseY);
-                graphics.fill(window.x+BORDER,y,window.x+window.width-BORDER,y+ROW,0xDDE9D5B6);
-                renderRow(graphics,quest,y,false);
+                int height=rowHeight(rows.indexOf(quest));
+                graphics.fill(window.x+BORDER,y,window.x+window.width-BORDER,y+height,0xDDE9D5B6);
+                renderRow(graphics,quest,y,height,false,rows.getFirst()==quest);
             }
         }
         graphics.disableScissor();
         if (interactive) graphics.drawString(font,"◢",window.x+window.width-12,window.y+window.height-12,palette.textColor(),false);
     }
-    private static void renderRow(GuiGraphics graphics, Quest quest, int y, boolean hovered) {
+    private static void renderRow(GuiGraphics graphics, Quest quest, int y, int height, boolean hovered, boolean first) {
         var font=Minecraft.getInstance().font;
         var palette=PALETTE;
-        if (hovered) graphics.fill(window.x+BORDER,y,window.x+window.width-BORDER,y+ROW,0x226D4C27);
+        if (hovered) graphics.fill(window.x+BORDER,y,window.x+window.width-BORDER,y+height,0x226D4C27);
         if (quest.getDisplay().getIcon()!=null) {
             graphics.pose().pushPose();
             var icon=quest.getDisplay().getIcon();
@@ -157,13 +171,31 @@ public final class TrackedQuestsOverlay {
         graphics.drawString(font,font.plainSubstrByWidth(quest.getDisplay().getTitle().getString(),window.width-48),window.x+32,y+3,color,false);
         String status=!quest.isActive() ? "disabled" : quest.isCompleted() ? (quest.hasPendingRewards() ? "reward_pending" : "completed") : quest.isFailed() ? "failed" : !quest.isTriggered() ? "locked" : "in_progress";
         graphics.drawString(font,font.plainSubstrByWidth(Component.translatable("questlog.tracking."+status).getString(),window.width-48),window.x+32,y+14,quest.isActive()?palette.progressTextColor():0x777777,false);
+        if (first) for (int i=0;i<quest.objectives.size();i++) {
+            var objective=quest.objectives.get(i);
+            int lineY=y+ROW+i*TrackingWindow.OBJECTIVE_ROW;
+            int boxX=window.x+17;
+            int boxY=lineY+1;
+            int ink=objective.isCompleted()?palette.progressTextColor():palette.textColor();
+            graphics.fill(boxX,boxY,boxX+8,boxY+1,ink);
+            graphics.fill(boxX,boxY+7,boxX+8,boxY+8,ink);
+            graphics.fill(boxX,boxY,boxX+1,boxY+8,ink);
+            graphics.fill(boxX+7,boxY,boxX+8,boxY+8,ink);
+            if (objective.isCompleted()) graphics.drawString(font,"x",boxX+2,lineY,ink,false);
+            graphics.drawString(font,font.plainSubstrByWidth(objective.getDisplay().getName().getString(),window.width-46),
+                    window.x+29,lineY,ink,false);
+        }
     }
     private static double floatingTop(double pointerY) {
-        return Math.max(window.y+HEADER,Math.min(reorder.top(pointerY),window.y+HEADER+(Math.min(rows.size(),capacity())-1)*ROW));
+        int height=rowHeight(Math.max(0,rows.indexOf(QuestlogClient.getLocal().getQuest(reorder.source()))));
+        return Math.max(window.y+HEADER,Math.min(reorder.top(pointerY),window.y+window.height-BORDER-height));
     }
     private static void updateReorder(double pointerY) {
         double clampedPointer=pointerY+floatingTop(pointerY)-reorder.top(pointerY);
-        if (reorder.move(rows,scroll,window.y+HEADER,ROW,clampedPointer)) { invalidate(); refresh(); }
+        int target=rowAt(clampedPointer);
+        if (target<0) target=clampedPointer<window.y+HEADER?firstVisible():lastVisible();
+        boolean after=clampedPointer>=window.y+HEADER+rowTop(target)-scroll+rowHeight(target)/2.0;
+        if (reorder.moveToIndex(rows,target,after)) { invalidate(); refresh(); }
     }
     public static boolean click(double x, double y, int button) {
         if (button!=0 || !(Minecraft.getInstance().screen instanceof ChatScreen) || !available()) return false;
@@ -174,7 +206,7 @@ public final class TrackedQuestsOverlay {
         if (index>=0 && index<rows.size()) {
             Quest quest=rows.get(index);
             if (x<window.x+32) {
-                reorder.begin(TRACKING.ids(),quest.getId(),y,window.y+HEADER+(index-scroll)*ROW);
+                reorder.begin(TRACKING.ids(),quest.getId(),y,window.y+HEADER+rowTop(index)-scroll);
                 invalidate();
             }
             else Minecraft.getInstance().setScreen(QuestDetails.overview(Minecraft.getInstance().screen,quest));
@@ -202,11 +234,12 @@ public final class TrackedQuestsOverlay {
     public static boolean scroll(double x,double y,double amount) {
         if (!(Minecraft.getInstance().screen instanceof ChatScreen) || !available()) return false;
         refresh(); if (rows.isEmpty()) return false; geometry(); if (!window.contains(x,y)) return false;
-        scroll=Math.max(0,Math.min(Math.max(0,rows.size()-capacity()),scroll-(int)Math.signum(amount)));
+        scroll=Math.max(0,Math.min(Math.max(0,totalHeight()-viewportHeight()),scroll-(int)Math.signum(amount)*16));
         return true;
     }
     private static int rowAt(double y) {
-        return y<window.y+HEADER || y>=window.y+HEADER+capacity()*ROW || y>=window.y+window.height-BORDER
-                ? -1 : scroll+(int)((y-window.y-HEADER)/ROW);
+        if (y<window.y+HEADER || y>=window.y+window.height-BORDER) return -1;
+        int local=(int)(y-window.y-HEADER)+scroll;
+        return TrackingWindow.indexAt(local,rows.size(),firstObjectives());
     }
 }

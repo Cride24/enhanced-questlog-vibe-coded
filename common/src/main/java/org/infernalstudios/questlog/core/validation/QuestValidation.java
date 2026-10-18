@@ -36,9 +36,16 @@ public final class QuestValidation {
         number(definition,"sort_order","sort_order",false,Integer.MIN_VALUE,issues);
         number(definition,"order","order",false,Integer.MIN_VALUE,issues);
         if (definition.has("_validation_error")) issues.add(new Issue("$", "questlog.validation.json", true));
-        for (String key : List.of("active", "repeatable", "global", "shareable", "hidden", "hide_when_completed")) {
+        for (String key : List.of("active", "repeatable", "global", "shareable", "group_quest", "per_participant", "hidden", "hide_when_completed")) {
             bool(definition, key, key, issues);
         }
+        if (definition.has("per_participant") && definition.get("per_participant").isJsonPrimitive()
+                && definition.getAsJsonPrimitive("per_participant").isBoolean()
+                && definition.get("per_participant").getAsBoolean()
+                && (!definition.has("group_quest") || !definition.get("group_quest").isJsonPrimitive()
+                || !definition.getAsJsonPrimitive("group_quest").isBoolean()
+                || !definition.get("group_quest").getAsBoolean()))
+            issues.add(new Issue("per_participant", "questlog.validation.group_required", true));
         reference(definition.get("chapter"), "chapter", EditorMetadata.SuggestionType.CHAPTER, false, references, issues);
         entries(definition, "objectives", false, "objectives", references, issues, 0);
         entries(definition, definition.has("prerequisites") ? "prerequisites" : "requirements", false,

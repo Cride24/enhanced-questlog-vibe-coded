@@ -8,9 +8,9 @@
         "${mod_author}"
     ],
     "contact": {
-        "homepage": "https://infernalstudios.org/",
-        "sources": "https://github.com/infernalstudios/Questlog",
-        "issues": "https://github.com/infernalstudios/Questlog/issues"
+        "homepage": "https://github.com/Cride24/enhanced-questlog-vibe-coded",
+        "sources": "https://github.com/Cride24/enhanced-questlog-vibe-coded",
+        "issues": "https://github.com/Cride24/enhanced-questlog-vibe-coded/issues"
     },
     "license": "${license}",
     "icon": "${mod_id}.png",

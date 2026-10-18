@@ -23,15 +23,16 @@ public class QuestCompleteObjective extends Objective {
     }
 
     private void onQuestCompleted(QuestEvent.Completed event) {
-        if (super.isCompleted() || this.getParent() == null) return;
+        if (this.getParent() == null || this.getPersonalUnits() >= this.getBaseRequiredAmount()) return;
         if (event.player.equals(this.getParent().manager.player) && event.quest.getId().equals(this.quest)) {
-            this.setUnits(this.getRequiredAmount());
+            this.setUnits(this.getBaseRequiredAmount());
         }
     }
 
     @Override
     public int getUnits() {
         int baseUnits = super.getUnits();
+        if (this.hasCollectiveProgress()) return baseUnits;
         if (baseUnits >= this.getRequiredAmount()) {
             return baseUnits;
         }

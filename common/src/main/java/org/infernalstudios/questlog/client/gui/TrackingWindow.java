@@ -4,7 +4,21 @@ package org.infernalstudios.questlog.client.gui;
 public final class TrackingWindow {
     public static final int BORDER = 8;
     public static final int HEADER = 32;
+    public static final int ROW = 28;
+    public static final int OBJECTIVE_ROW = 12;
     public static final int MIN_HEIGHT = HEADER + 28 + BORDER;
+    public static int rowHeight(int index, int firstObjectiveCount) {
+        return index == 0 ? (int) Math.min(Integer.MAX_VALUE, ROW + (long) Math.max(0, firstObjectiveCount) * OBJECTIVE_ROW) : ROW;
+    }
+    public static int rowTop(int index, int firstObjectiveCount) {
+        return (int) Math.min(Integer.MAX_VALUE, (long) Math.max(0, index) * ROW
+                + (index > 0 ? (long) Math.max(0, firstObjectiveCount) * OBJECTIVE_ROW : 0));
+    }
+    public static int indexAt(int contentY, int count, int firstObjectiveCount) {
+        if (count <= 0 || contentY < 0 || contentY >= rowTop(count, firstObjectiveCount)) return -1;
+        if (contentY < rowHeight(0, firstObjectiveCount)) return 0;
+        return 1 + (contentY - rowHeight(0, firstObjectiveCount)) / ROW;
+    }
     public int x, y, width, height;
     private int edges, originX, originY, originWidth, originHeight;
     private double pressX, pressY;

@@ -131,6 +131,15 @@ tasks.register('verifyQuestSharing', JavaExec) {
 }
 tasks.named('check') { dependsOn 'verifyQuestSharing' }
 
+tasks.register('verifyGroupProgress', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'org.infernalstudios.questlog.core.GroupProgressVerification'
+    workingDir = layout.buildDirectory.dir('verification').get().asFile
+    doFirst { workingDir.mkdirs() }
+}
+tasks.named('check') { dependsOn 'verifyGroupProgress' }
+
 configurations {
     commonJava {
         canBeResolved = false

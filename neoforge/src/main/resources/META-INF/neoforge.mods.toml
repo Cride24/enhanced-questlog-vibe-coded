@@ -1,7 +1,7 @@
 modLoader = "javafml"
 loaderVersion = "${neoforge_loader_version_range}"
 license = "${license}"
-issueTrackerURL = "https://github.com/infernalstudios/Questlog/issues"
+issueTrackerURL = "https://github.com/Cride24/enhanced-questlog-vibe-coded/issues"
 
 [[mods]]
 modId = "${mod_id}"

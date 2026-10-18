@@ -44,6 +44,8 @@ public class ServerPlayerManager {
         }
     }
 
+    MinecraftServer server() { return server; }
+
     public void addPlayer(Player player) {
         QuestManager questManager = new QuestManager(player);
         this.questManagers.put(player.getUUID(), questManager);
@@ -233,6 +235,10 @@ public class ServerPlayerManager {
         return new CompoundTag();
     }
 
+    boolean isGloballyCompleted(ResourceLocation id) {
+        return loadGlobalData().getCompound(id.toString()).getBoolean("completed");
+    }
+
     private boolean saveGlobalData(CompoundTag tag) {
         Path tempFile = null;
         try {
@@ -307,14 +313,21 @@ public class ServerPlayerManager {
         if (data == null) return false;
         JsonObject definition = DefinitionUtil.hasCachedQuest(questId) ? DefinitionUtil.getCachedQuest(questId) : null;
         boolean global = definition != null && definition.has("global") && definition.get("global").getAsBoolean();
-        resetSavedQuest(data, questId, suppressGlobal && global);
+        boolean groupQuest = definition != null && definition.has("group_quest")
+                && definition.get("group_quest").isJsonPrimitive() && definition.get("group_quest").getAsBoolean();
+        resetSavedQuest(data, questId, suppressGlobal && global, groupQuest);
         return writePlayerData(dir, playerId, data);
     }
 
     static void resetSavedQuest(CompoundTag data, ResourceLocation questId, boolean ignoreGlobalCompletion) {
+        resetSavedQuest(data, questId, ignoreGlobalCompletion, false);
+    }
+
+    static void resetSavedQuest(CompoundTag data, ResourceLocation questId, boolean ignoreGlobalCompletion, boolean groupQuest) {
         CompoundTag previous = data.getCompound(questId.toString());
         CompoundTag questData = new CompoundTag();
         questData.putBoolean("ignore_global_completion", ignoreGlobalCompletion);
+        questData.putBoolean("group_reset_pending", groupQuest);
         questData.putBoolean("shared_access", previous.getBoolean("shared_access"));
         questData.putString("offered_by", previous.getString("offered_by"));
         questData.putString("offer_version", previous.getString("offer_version"));

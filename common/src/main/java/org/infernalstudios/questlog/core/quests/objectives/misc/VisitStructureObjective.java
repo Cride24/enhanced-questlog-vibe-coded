@@ -31,7 +31,7 @@ public class VisitStructureObjective extends Objective {
     }
 
     private void onPlayerMove(TriggerPlayerEvent.Tick event) {
-        if (this.isCompleted() || this.getParent() == null) return;
+        if (!this.canRecordMore()) return;
         if (event.player instanceof ServerPlayer player && this.getParent().manager.player.equals(player) && --ticksUntilCheck <= 0) {
             ticksUntilCheck = 20;
             if (!player.serverLevel().isLoaded(player.blockPosition())) return;
@@ -45,7 +45,7 @@ public class VisitStructureObjective extends Objective {
             if (!player.serverLevel().structureManager().getStructureWithPieceAt(player.blockPosition(), structure).isValid())
                 return;
 
-            this.setUnits(this.getUnits() + 1);
+            this.addUnits(1);
         }
     }
 }
