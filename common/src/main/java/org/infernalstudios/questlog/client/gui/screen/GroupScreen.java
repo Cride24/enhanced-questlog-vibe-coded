@@ -111,9 +111,11 @@ public class GroupScreen extends Screen {
         panelTitle = "";
         input = null;
         if (shareQuest != null) { invitePopup(); return; }
-        addRenderableWidget(new BookSideTab(left - 32, top + 4, Items.WRITABLE_BOOK.getDefaultInstance(), false,
+        int frameLeft = (width - BACKGROUND.width()) / 2 + 375;
+        int frameTop = (height - BACKGROUND.height()) / 2 + 174;
+        addRenderableWidget(new BookSideTab(frameLeft - 32, frameTop + 19, Items.WRITABLE_BOOK.getDefaultInstance(), false,
                 Component.translatable("questlog.groups.journal"), () -> minecraft.setScreen(journal)));
-        addRenderableWidget(new BookSideTab(left - 32, top + 65, Items.PLAYER_HEAD.getDefaultInstance(), true,
+        addRenderableWidget(new BookSideTab(frameLeft - 32, frameTop + 80, Items.PLAYER_HEAD.getDefaultInstance(), true,
                 Component.translatable("questlog.groups.tab"), () -> {}));
         if (naming) { namePopup(); return; }
         if (inviting) { invitePopup(); return; }

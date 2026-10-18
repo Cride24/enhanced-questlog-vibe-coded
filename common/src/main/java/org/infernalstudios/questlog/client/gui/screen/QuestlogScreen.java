@@ -153,11 +153,11 @@ public class QuestlogScreen extends Screen {
 
     private void refreshList() {
         this.clearWidgets();
-        int listX = (this.width - 245) / 2 + 1 + Questlog.getConfig().gui.mainPanelX;
-        int listY = (this.height - 136) / 2 + 1 + Questlog.getConfig().gui.mainPanelY;
-        this.addRenderableWidget(new BookSideTab(listX - 32, listY + 4, net.minecraft.world.item.Items.WRITABLE_BOOK.getDefaultInstance(), true,
+        int frameLeft = (this.width - BACKGROUND_TEXTURE.width()) / 2 + 375;
+        int frameTop = (this.height - BACKGROUND_TEXTURE.height()) / 2 + 174;
+        this.addRenderableWidget(new BookSideTab(frameLeft - 32, frameTop + 19, net.minecraft.world.item.Items.WRITABLE_BOOK.getDefaultInstance(), true,
                 Component.translatable("questlog.groups.journal"), () -> {}));
-        this.addRenderableWidget(new BookSideTab(listX - 32, listY + 65, net.minecraft.world.item.Items.PLAYER_HEAD.getDefaultInstance(), false,
+        this.addRenderableWidget(new BookSideTab(frameLeft - 32, frameTop + 80, net.minecraft.world.item.Items.PLAYER_HEAD.getDefaultInstance(), false,
                 Component.translatable("questlog.groups.tab"), () -> { if (minecraft != null) minecraft.setScreen(new GroupScreen(QuestlogScreen.this)); }));
         this.buildSearch();
         this.buildTabs();
