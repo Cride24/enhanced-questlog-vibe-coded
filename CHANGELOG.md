@@ -5,62 +5,57 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [3.5.4-vibe.1] - 2026-11-07
 
-## [3.5.1] - 2026-10-03
+### Integrated
 
-### Added
+- Integrated upstream Questlog 3.4.2 through 3.5.4 and the Stonecutter build for Minecraft 1.21.1 Fabric/NeoForge.
+- Preserved the fork's authoring, translations, item links, quest tracking, progress/reset, adventure groups, sharing, and collective progress. See `docs/INTEGRATION_AMONT_3_5_4.md` for the conflict decisions and checks.
 
-- Added inline quest/chapter translations, searchable in-game language selection, per-field US-English/authored-order fallback and legacy None mode.
-- Added a personal quest tracking overlay with server-side order and local window geometry, passive during gameplay and interactive in Minecraft chat.
-- Added author validation for required fields, registered types, values and available references, with clickable in-game reports and required-field markers.
-- Added explicit draft saving and activation, plus isolated functional and intentionally malformed test examples.
-
-### Changed
-
-- Editing deactivates a quest on the server until the author explicitly reactivates it. Incomplete drafts retain saved progression; unchanged entries recover their state after reordering.
-- Disabled quests stay followed in grey. Completed quests move after incomplete quests and leave tracking once all rewards are collected, or immediately when no rewards exist.
-- Updated the NeoForge network protocol to 2.2 for inline-language definitions; clients and servers must use matching versions.
+## [3.5.4] - 2026-11-05
 
 ### Fixed
 
-- Opened quest/chapter editors in the player language for new definitions, or the sole authored language then player/US-English/JSON-order priority for existing definitions; language buttons now show Minecraft language names and regions.
-- Made the whole brown tracking frame capture resizing, added the journal heading separator and previewed quest reordering continuously while dragging.
-- Prefilled new quest ordering after the highest order in the selected chapter, including inactive drafts and legacy ordering values.
-- Prefilled new quests with the chapter currently selected in the journal, including their automatic identity preview.
-- Restyled the Follow button and tracking overlay using Questlog textures, with configurable background/frame opacity.
-- Fixed dragging in chat by checking the physical mouse button instead of the gameplay-only MouseHandler state.
-- Hid inactive/nonfunctional followed quests outside author mode while preserving their personal order.
-- Moved required markers after field labels and removed optional markers; new titles and required descriptions start empty.
-- Added automatic read-only quest identities allocated by the server on first save and retained on subsequent edits.
-- Made draft validation silent and returned failed activation reports to the same editor; removed the analysis buttons.
-- Prevented inactive quests from accepting normal progress, reading, resets and reward collection.
-- Kept malformed ordering/title values and absent quest references accessible to validation.
+- Fixed the entry list in the quest editor scrolling back to the top when duplicating or deleting an entry.
 
-## [3.5.0] - 2026-09-30
-
-### Added
-
-- Added item tooltips for inline item links in quest text and for objectives with a specific item, with a client option to disable them.
-- Added optional recipe clicks for those item links and objective names when EMI or JEI is installed.
-- Added optional `details` text on a separate quest page, with a matching field in the in-game editor.
-- Added optional reward previews below objectives before quest completion. Previews are off by default and can be overridden per quest.
-- Added mouse wheel navigation to the in-game editor's autocomplete lists while keeping click and keyboard selection.
-
-### Changed
-
-- Quest titles display on at most two lines; newly entered titles are limited to 50 characters. Objective and reward names continue to wrap within their panels.
-- Moved the Collect action below the rewards panel so the quest navigation button remains available while rewards are unclaimed.
-- Included the Objectives heading in the right panel's scrolling area.
+## [3.5.3] - 2026-10-31
 
 ### Fixed
 
-- Ignored malformed hover-image links instead of crashing when quest text is hovered.
-- Fixed independent scrolling for the Description and Details fields in the quest editor.
-- Resolved translated quest descriptions and details using the current client language, including inline item links.
-- Centered reward icons on the first line of their names in the right panel.
-- Enforced the 50-character title limit while editing without truncating existing longer titles.
-- Aligned iconless reward choices with icon-bearing choices and corrected the Choice and Experience editor button positions.
+- Fixed structure and biome tags not working in "Visit Structure" and "Visit Biome" objectives  (#185).
+
+## [3.5.2] - 2026-10-30
+
+### Fixed
+
+- Fixed the "Edit Child", "Edit Children", "Edit Choices" and "Levels" buttons overlapping the icon field in the entry
+  editor (#184).
+- Fixed quest descriptions wrapping mid-word and breaking inline symbols added by mods like Hex Casting (#138).
+
+## [3.5.1] - 2026-10-30
+
+### Fixed
+
+- Fixed loot table rewards failing to be collected on Fabric.
+
+## [3.5.0] - 2026-10-23
+
+- Backported recent 1.21 fixes.
+- Ported to stonecutter.
+
+## [3.4.2] - 2026-10-23
+
+### Fixed
+
+- Fixed the player sometimes getting stuck (unable to move or look around) after reloading quests, toggling edit mode,
+  or another player joining a LAN world.
+- Fixed quest objectives from before a reload or relog continuing to listen for events in the background.
+- Fixed `clickEvent` in JSON text component descriptions doing nothing when clicked (e.g. `run_command`, `open_url`,
+  `copy_to_clipboard`) (@Theawsomelamp).
+- Fixed resizing the game window wiping unsaved changes in the quest and chapter editors (sorry Chakyl!).
+- Fixed scrollbar appearing on quest descriptions that are exactly 11 lines long.
+- Fixed quests using item `components`, entity predicates or component item rewards failing to load on dedicated
+  servers.
 
 ## [3.4.1] - 2026-09-22
 
@@ -75,7 +70,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed misleading "Hidden" quest setting tooltip in the editor.
 - Fixed the Entity Approach objective in the editor generating a "required_amount" field instead of "range".
 - Defaulted missing "range" in Entity Approach objectives to 5 blocks to prevent broken quest errors.
-- Fixed the selection list in the quest editor where clicking the scrollbar clicked options underneath it and mouse wheel scrolling was occasionally unresponsive.
+- Fixed the selection list in the quest editor where clicking the scrollbar clicked options underneath it and mouse
+  wheel scrolling was occasionally unresponsive.
 
 ## [3.4.0] - 2026-09-12
 

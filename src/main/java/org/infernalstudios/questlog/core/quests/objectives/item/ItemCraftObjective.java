@@ -1,0 +1,27 @@
+package org.infernalstudios.questlog.core.quests.objectives.item;
+
+import com.evandev.triggers.event.events.TriggerPlayerEvent;
+import com.google.gson.JsonObject;
+import net.minecraft.server.level.ServerPlayer;
+
+public class ItemCraftObjective extends AbstractItemObjective {
+
+    public ItemCraftObjective(JsonObject definition) {
+        super(definition);
+    }
+
+    @Override
+    public void registerEventListeners() {
+        super.registerEventListeners();
+        this.addListener(TriggerPlayerEvent.Craft.class, this::onItemCraft);
+    }
+
+    private void onItemCraft(TriggerPlayerEvent.Craft event) {
+        if (!this.canRecordMore()) return;
+        if (
+                event.player instanceof ServerPlayer player && this.getParent().manager.player.equals(player) && this.test(event.outputItem)
+        ) {
+            this.addUnits(event.outputItem.getCount());
+        }
+    }
+}

@@ -1,0 +1,25 @@
+package org.infernalstudios.questlog.core.quests.objectives.block;
+
+import com.google.gson.JsonObject;
+import net.minecraft.server.level.ServerPlayer;
+import com.evandev.triggers.event.events.TriggerBlockEvent;
+
+public class BlockPlaceObjective extends AbstractBlockObjective {
+
+    public BlockPlaceObjective(JsonObject definition) {
+        super(definition);
+    }
+
+    @Override
+    public void registerEventListeners() {
+        super.registerEventListeners();
+        this.addListener(TriggerBlockEvent.Place.class, this::onBlockPlace);
+    }
+
+    private void onBlockPlace(TriggerBlockEvent.Place event) {
+        if (!this.canRecordMore()) return;
+        if (event.entity instanceof ServerPlayer player && this.getParent().manager.player.equals(player) && this.test(event.state)) {
+            this.addUnits(1);
+        }
+    }
+}
