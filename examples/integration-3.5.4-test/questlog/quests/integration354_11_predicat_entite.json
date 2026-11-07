@@ -1,0 +1,21 @@
+{
+  "title": "11 — Prédicat d’entité",
+  "description": "Sur serveur dédié, approche une vache à cinq blocs. Cette quête vérifie le chargement du prédicat JSON.",
+  "chapter": "questlog:main",
+  "sort_order": 110,
+  "icon": {
+    "item": "minecraft:leather"
+  },
+  "objectives": [
+    {
+      "type": "questlog:entity_approach",
+      "entity": "minecraft:cow",
+      "predicate": {
+        "type": "minecraft:cow"
+      },
+      "range": 5,
+      "name": "Approcher une vache"
+    }
+  ],
+  "rewards": []
+}

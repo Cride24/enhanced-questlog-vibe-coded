@@ -1,0 +1,24 @@
+{
+  "title": "01 — Suivi personnel",
+  "description": "Suis cette quête puis une autre. Seule la première quête suivie doit afficher ses objectifs. Fabrique une table de craft et un four pour vérifier les cases.",
+  "chapter": "questlog:main",
+  "sort_order": 10,
+  "icon": {
+    "item": "minecraft:crafting_table"
+  },
+  "objectives": [
+    {
+      "type": "questlog:item_craft",
+      "item": "minecraft:crafting_table",
+      "required_amount": 1,
+      "name": "Fabriquer une table de craft"
+    },
+    {
+      "type": "questlog:item_craft",
+      "item": "minecraft:furnace",
+      "required_amount": 1,
+      "name": "Fabriquer un four"
+    }
+  ],
+  "rewards": []
+}

@@ -1,0 +1,20 @@
+{
+  "title": "04 — Possession, par participant",
+  "description": "Possédez 64 pierres par participant dans vos inventaires principaux. Transfère une pile entre deux joueurs : elle ne doit compter qu'une fois.",
+  "chapter": "questlog:main",
+  "sort_order": 40,
+  "icon": {
+    "item": "minecraft:stone"
+  },
+  "group_quest": true,
+  "per_participant": true,
+  "objectives": [
+    {
+      "type": "questlog:item_obtain",
+      "item": "minecraft:stone",
+      "required_amount": 64,
+      "name": "Posséder 64 pierres par participant"
+    }
+  ],
+  "rewards": []
+}

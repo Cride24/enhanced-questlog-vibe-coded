@@ -1,0 +1,34 @@
+{
+  "title": "10 — Récompense à composants",
+  "description": "Sur serveur dédié, prends un livre puis réclame ce livre enchanté avec composants. Vérifie son enchantement Fortune III.",
+  "chapter": "questlog:main",
+  "sort_order": 100,
+  "icon": {
+    "item": "minecraft:enchanted_book"
+  },
+  "objectives": [
+    {
+      "type": "questlog:item_obtain",
+      "item": "minecraft:book",
+      "required_amount": 1,
+      "name": "Posséder un livre"
+    }
+  ],
+  "rewards": [
+    {
+      "type": "questlog:item",
+      "item": {
+        "id": "minecraft:enchanted_book",
+        "components": {
+          "minecraft:stored_enchantments": {
+            "levels": {
+              "minecraft:fortune": 3
+            }
+          }
+        }
+      },
+      "count": 1,
+      "name": "Livre Fortune III"
+    }
+  ]
+}

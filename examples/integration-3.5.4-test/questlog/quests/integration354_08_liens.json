@@ -1,0 +1,52 @@
+{
+  "title": "08 — Liens et clics JSON",
+  "description": [
+    {
+      "text": "Teste ces liens : "
+    },
+    {
+      "text": "copier",
+      "underlined": true,
+      "clickEvent": {
+        "action": "copy_to_clipboard",
+        "value": "Questlog 3.5.4 OK"
+      }
+    },
+    {
+      "text": " · "
+    },
+    {
+      "text": "aide",
+      "underlined": true,
+      "clickEvent": {
+        "action": "run_command",
+        "value": "/help"
+      }
+    },
+    {
+      "text": " · "
+    },
+    {
+      "text": "page externe",
+      "underlined": true,
+      "clickEvent": {
+        "action": "open_url",
+        "value": "https://example.org"
+      }
+    }
+  ],
+  "details": "Survole [une hache en bois](item:minecraft:wooden_axe) pour son infobulle ; clique pour ouvrir EMI/JEI si installé. Survole [une image](image:questlog:textures/gui/questlog.png:32:32). Ouvre aussi [la quête partageable](quest:questlog:integration354_06_verrouillee_partageable) seulement si tu y as accès.",
+  "chapter": "questlog:main",
+  "sort_order": 80,
+  "icon": {
+    "item": "minecraft:paper"
+  },
+  "objectives": [
+    {
+      "type": "questlog:read",
+      "required_amount": 1,
+      "name": "Lire et tester les liens"
+    }
+  ],
+  "rewards": []
+}

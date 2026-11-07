@@ -1,0 +1,20 @@
+{
+  "title": "14 — Structure par participant",
+  "description": "Forme un groupe de deux et trouve un village. Chaque membre doit compter quatre secondes de visite ; A peut continuer à contribuer après ses quatre premières.",
+  "chapter": "questlog:exploration",
+  "sort_order": 140,
+  "icon": {
+    "item": "minecraft:bell"
+  },
+  "group_quest": true,
+  "per_participant": true,
+  "objectives": [
+    {
+      "type": "questlog:visit_structure",
+      "structure": "#minecraft:village",
+      "required_amount": 4,
+      "name": "Visiter un village, quatre unités par participant"
+    }
+  ],
+  "rewards": []
+}

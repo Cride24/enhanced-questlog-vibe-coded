@@ -1,0 +1,25 @@
+{
+  "title": "06 — Verrouillée et partageable",
+  "description": "Cette quête personnelle nécessite la réussite de 01. Partage-la à un joueur qui ne l'a pas encore débloquée, puis fabrique un coffre.",
+  "chapter": "questlog:main",
+  "sort_order": 60,
+  "icon": {
+    "item": "minecraft:chest"
+  },
+  "shareable": true,
+  "prerequisites": [
+    {
+      "type": "questlog:quest_complete",
+      "quest": "questlog:integration354_01_suivi_personnel"
+    }
+  ],
+  "objectives": [
+    {
+      "type": "questlog:item_craft",
+      "item": "minecraft:chest",
+      "required_amount": 1,
+      "name": "Fabriquer un coffre"
+    }
+  ],
+  "rewards": []
+}

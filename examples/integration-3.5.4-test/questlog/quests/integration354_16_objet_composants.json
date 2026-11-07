@@ -1,0 +1,21 @@
+{
+  "title": "16 — Objet à composants",
+  "description": "Sur serveur dédié, vérifie que la quête se charge. Obtiens ensuite une plume nommée Magic Feather avec le composant custom_name.",
+  "chapter": "questlog:main",
+  "sort_order": 160,
+  "icon": {
+    "item": "minecraft:feather"
+  },
+  "objectives": [
+    {
+      "type": "questlog:item_obtain",
+      "item": "minecraft:feather",
+      "components": {
+        "minecraft:custom_name": "'Magic Feather'"
+      },
+      "required_amount": 1,
+      "name": "Posséder Magic Feather"
+    }
+  ],
+  "rewards": []
+}

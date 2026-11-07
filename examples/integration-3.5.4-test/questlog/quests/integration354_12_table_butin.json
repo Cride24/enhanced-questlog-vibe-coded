@@ -1,0 +1,23 @@
+{
+  "title": "12 — Table de butin Fabric",
+  "description": "Lis cette quête sur serveur Fabric dédié et réclame la récompense de table de butin. Une seule collecte doit réussir.",
+  "chapter": "questlog:main",
+  "sort_order": 120,
+  "icon": {
+    "item": "minecraft:chest"
+  },
+  "objectives": [
+    {
+      "type": "questlog:read",
+      "required_amount": 1,
+      "name": "Lire cette quête"
+    }
+  ],
+  "rewards": [
+    {
+      "type": "questlog:loot_table",
+      "loot_table": "minecraft:chests/simple_dungeon",
+      "name": "Butin de donjon"
+    }
+  ]
+}

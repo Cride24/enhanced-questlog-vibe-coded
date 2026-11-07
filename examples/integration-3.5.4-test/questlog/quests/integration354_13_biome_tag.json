@@ -1,0 +1,18 @@
+{
+  "title": "13 — Tag de biome",
+  "description": "Entre dans un biome de l’Overworld ; le tag doit être reconnu. Une entrée suffit.",
+  "chapter": "questlog:exploration",
+  "sort_order": 130,
+  "icon": {
+    "item": "minecraft:grass_block"
+  },
+  "objectives": [
+    {
+      "type": "questlog:visit_biome",
+      "biome": "#minecraft:is_overworld",
+      "required_amount": 1,
+      "name": "Visiter un biome de l’Overworld"
+    }
+  ],
+  "rewards": []
+}

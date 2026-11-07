@@ -1,0 +1,72 @@
+{
+  "title": "15 — Liste longue de l’éditeur",
+  "description": "En mode édition, descends dans les douze objectifs, duplique et supprime une entrée du bas : le défilement doit rester près de cette entrée.",
+  "chapter": "questlog:main",
+  "sort_order": 150,
+  "icon": {
+    "item": "minecraft:writable_book"
+  },
+  "objectives": [
+    {
+      "type": "questlog:read",
+      "required_amount": 1,
+      "name": "Entrée 01"
+    },
+    {
+      "type": "questlog:read",
+      "required_amount": 1,
+      "name": "Entrée 02"
+    },
+    {
+      "type": "questlog:read",
+      "required_amount": 1,
+      "name": "Entrée 03"
+    },
+    {
+      "type": "questlog:read",
+      "required_amount": 1,
+      "name": "Entrée 04"
+    },
+    {
+      "type": "questlog:read",
+      "required_amount": 1,
+      "name": "Entrée 05"
+    },
+    {
+      "type": "questlog:read",
+      "required_amount": 1,
+      "name": "Entrée 06"
+    },
+    {
+      "type": "questlog:read",
+      "required_amount": 1,
+      "name": "Entrée 07"
+    },
+    {
+      "type": "questlog:read",
+      "required_amount": 1,
+      "name": "Entrée 08"
+    },
+    {
+      "type": "questlog:read",
+      "required_amount": 1,
+      "name": "Entrée 09"
+    },
+    {
+      "type": "questlog:read",
+      "required_amount": 1,
+      "name": "Entrée 10"
+    },
+    {
+      "type": "questlog:read",
+      "required_amount": 1,
+      "name": "Entrée 11"
+    },
+    {
+      "type": "questlog:read",
+      "required_amount": 1,
+      "name": "Entrée 12"
+    }
+  ],
+  "rewards": []
+}

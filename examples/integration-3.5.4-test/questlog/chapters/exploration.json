@@ -1,0 +1,9 @@
+{
+  "name": "Tests 3.5.4 — exploration",
+  "icon": {
+    "item": "minecraft:compass"
+  },
+  "order": 2,
+  "default_chapter": false,
+  "hidden": false
+}

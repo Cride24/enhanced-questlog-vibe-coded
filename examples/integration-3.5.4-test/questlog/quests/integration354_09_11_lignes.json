@@ -1,0 +1,17 @@
+{
+  "title": "09 — Description de 11 lignes",
+  "description": "Ligne 01\nLigne 02\nLigne 03\nLigne 04\nLigne 05\nLigne 06\nLigne 07\nLigne 08\nLigne 09\nLigne 10\nLigne 11",
+  "chapter": "questlog:main",
+  "sort_order": 90,
+  "icon": {
+    "item": "minecraft:book"
+  },
+  "objectives": [
+    {
+      "type": "questlog:read",
+      "required_amount": 1,
+      "name": "Lire les onze lignes"
+    }
+  ],
+  "rewards": []
+}

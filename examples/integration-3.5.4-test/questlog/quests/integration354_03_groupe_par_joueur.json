@@ -1,0 +1,20 @@
+{
+  "title": "03 — Groupe, par participant",
+  "description": "Fabriquez 64 boutons de chêne par participant. À deux, le quota est 128 ; seul, 64. Vérifie les contributions avant et après regroupement, départ et reconnexion.",
+  "chapter": "questlog:main",
+  "sort_order": 30,
+  "icon": {
+    "item": "minecraft:oak_button"
+  },
+  "group_quest": true,
+  "per_participant": true,
+  "objectives": [
+    {
+      "type": "questlog:item_craft",
+      "item": "minecraft:oak_button",
+      "required_amount": 64,
+      "name": "Fabriquer 64 boutons par participant"
+    }
+  ],
+  "rewards": []
+}

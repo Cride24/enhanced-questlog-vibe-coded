@@ -1,0 +1,18 @@
+{
+  "title": "07 — Quête mondiale",
+  "description": "Lis cette quête pour vérifier l'héritage de la réussite mondiale. Vérifie séparément le reset ciblé d'un joueur.",
+  "chapter": "questlog:main",
+  "sort_order": 70,
+  "icon": {
+    "item": "minecraft:book"
+  },
+  "global": true,
+  "objectives": [
+    {
+      "type": "questlog:read",
+      "required_amount": 1,
+      "name": "Lire cette quête"
+    }
+  ],
+  "rewards": []
+}

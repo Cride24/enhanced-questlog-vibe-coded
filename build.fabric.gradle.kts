@@ -50,6 +50,15 @@ verificationMains.forEach { (name, entrypoint) ->
     }
 }
 
+tasks.register<JavaExec>("verifyIntegrationPack") {
+    dependsOn(tasks.named("testClasses"))
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass = "org.infernalstudios.questlog.IntegrationPackVerification"
+    systemProperty("questlog.integrationPack", rootProject.file("examples/integration-3.5.4-test/questlog").absolutePath)
+    workingDir = layout.buildDirectory.dir("verification").get().asFile
+    doFirst { workingDir.mkdirs() }
+}
+
 repositories {
     mavenCentral()
     exclusiveContent {

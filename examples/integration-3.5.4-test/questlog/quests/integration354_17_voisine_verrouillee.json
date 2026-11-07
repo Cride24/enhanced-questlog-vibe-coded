@@ -1,0 +1,25 @@
+{
+  "title": "17 — Voisine non partageable",
+  "description": "Même prérequis que 06. Accepter le partage de 06 ne doit pas révéler ni débloquer cette quête.",
+  "chapter": "questlog:main",
+  "sort_order": 170,
+  "icon": {
+    "item": "minecraft:barrel"
+  },
+  "shareable": false,
+  "prerequisites": [
+    {
+      "type": "questlog:quest_complete",
+      "quest": "questlog:integration354_01_suivi_personnel"
+    }
+  ],
+  "objectives": [
+    {
+      "type": "questlog:item_craft",
+      "item": "minecraft:barrel",
+      "required_amount": 1,
+      "name": "Fabriquer un tonneau"
+    }
+  ],
+  "rewards": []
+}

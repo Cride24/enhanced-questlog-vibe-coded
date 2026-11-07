@@ -1,0 +1,8 @@
+{
+  "name": "Tests Enhanced Questlog — intégration 3.5.4",
+  "icon": {
+    "item": "minecraft:knowledge_book"
+  },
+  "default_chapter": true,
+  "hidden": false
+}
