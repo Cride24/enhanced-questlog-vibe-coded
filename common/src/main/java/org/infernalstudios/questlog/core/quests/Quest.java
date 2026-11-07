@@ -229,6 +229,7 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
         this.ignoreGlobalCompletion = ignoreGlobalCompletion;
         this.inheritedGlobalCompletion = false;
         this.suspendedProgress = null;
+        this.objectives.forEach(Objective::clearCollectiveProgress);
         this.prerequisites.forEach(trigger -> trigger.forceSetUnits(0));
         this.objectives.forEach(obj -> obj.forceSetUnits(0));
         this.failureConditions.forEach(obj -> obj.forceSetUnits(0));

@@ -30,7 +30,7 @@ public final class GroupProgress {
     private static final Set<Quest> pending = new LinkedHashSet<>();
     private GroupProgress() {}
 
-    private record Participant(UUID id, Quest online, CompoundTag saved) {}
+    record Participant(UUID id, Quest online, CompoundTag saved, boolean resetPending) {}
 
     public static boolean refresh(Quest source) {
         ServerPlayerManager players = ServerPlayerManager.INSTANCE;
@@ -51,14 +51,14 @@ public final class GroupProgress {
                 QuestManager manager = player == null ? null : players.getManagerIfPresent(player);
                 Quest quest = manager == null || !manager.isLoaded() ? null : manager.getQuest(id);
                 if (quest != null) {
-                    if (quest.isActive() && quest.isVisibleToPlayer() && !quest.hasSentCompletion
-                            && !quest.isGroupResetPending() && !quest.isFailed())
-                        participants.add(new Participant(member, quest, null));
+                    if (quest.isActive() && quest.isVisibleToPlayer() && !quest.hasSentCompletion && !quest.isFailed())
+                        participants.add(new Participant(member, quest, null, quest.isGroupResetPending()));
                 } else if (player == null) {
                     CompoundTag all = ServerPlayerManager.readPlayerData(dir, member);
                     if (all == null) continue;
                     CompoundTag saved = all.getCompound(id.toString());
-                    if (eligibleOffline(source, saved, globalDone)) participants.add(new Participant(member, null, all));
+                    if (eligibleOffline(source, saved, globalDone))
+                        participants.add(new Participant(member, null, all, saved.getBoolean("group_reset_pending")));
                 }
             }
             if (!participants.isEmpty()) {
@@ -95,7 +95,6 @@ public final class GroupProgress {
 
     static boolean eligibleOffline(Quest source, CompoundTag saved, boolean globalDone) {
         if (saved.getBoolean("completed")) return false;
-        if (saved.getBoolean("group_reset_pending")) return false;
         if (globalDone && !saved.getBoolean("ignore_global_completion")) return false;
         var failures = saved.getList("failures", Tag.TAG_COMPOUND);
         for (int i = 0; i < source.failureConditions.size() && i < failures.size(); i++)
@@ -137,7 +136,7 @@ public final class GroupProgress {
         return saved.getInt("units") >= model.getBaseRequiredAmount();
     }
 
-    private static void applyObjective(Objective model, int index, int[] path, List<Participant> people,
+    static void applyObjective(Objective model, int index, int[] path, List<Participant> people,
                                        boolean perParticipant, ServerPlayerManager players) {
         List<Objective> children = model.getChildren();
         if (!children.isEmpty()) {
@@ -150,6 +149,7 @@ public final class GroupProgress {
         }
         long total = 0;
         for (Participant person : people) {
+            if (person.resetPending) continue;
             Objective own = person.online == null ? null : ownObjective(person.online.objectives.get(index), path);
             int units;
             if (model instanceof ItemObtainObjective obtain) {
@@ -190,21 +190,22 @@ public final class GroupProgress {
     }
 
     private static void complete(List<Participant> people, Quest source, ServerPlayerManager players, Path dir) {
+        if (people.stream().allMatch(Participant::resetPending)) return;
         for (Participant person : people) {
-            if (person.online != null) continue;
+            if (person.online != null || person.resetPending) continue;
             CompoundTag saved = person.saved.getCompound(source.getId().toString());
             saved.putBoolean("completed", true);
             person.saved.put(source.getId().toString(), saved);
             if (!ServerPlayerManager.writePlayerData(dir, person.id, person.saved)) return;
         }
         for (Participant person : people) {
-            if (person.online != null) {
+            if (person.online != null && !person.resetPending) {
                 person.online.hasSentCompletion = true;
                 players.save(person.online.manager);
             }
         }
         for (Participant person : people) {
-            if (person.online == null) continue;
+            if (person.online == null || person.resetPending) continue;
             QuestlogEvents.onQuestCompleted(new QuestEvent.Completed(person.online.manager.player, person.online, true));
             players.save(person.online.manager);
         }

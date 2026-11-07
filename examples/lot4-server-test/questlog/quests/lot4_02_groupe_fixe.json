@@ -1,0 +1,13 @@
+{
+  "title": "02 — Groupe, quantité fixe",
+  "description": "Forme un groupe et fabriquez ensemble 64 torches. Le quota reste 64, même si un membre rejoint ou quitte le groupe.",
+  "chapter": "questlog:main",
+  "sort_order": 20,
+  "icon": { "item": "minecraft:torch" },
+  "group_quest": true,
+  "per_participant": false,
+  "objectives": [
+    { "type": "questlog:item_craft", "item": "minecraft:torch", "required_amount": 64, "name": "Fabriquer 64 torches ensemble" }
+  ],
+  "rewards": []
+}

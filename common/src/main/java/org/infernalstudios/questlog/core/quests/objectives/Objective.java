@@ -63,6 +63,7 @@ public abstract class Objective implements NbtSaveable, WithDisplayData<Objectiv
     public void clearCollectiveProgress() {
         this.collectiveUnits = -1;
         this.collectiveRequired = -1;
+        for (Objective child : this.getChildren()) child.clearCollectiveProgress();
     }
 
     public boolean canRecordMore() {

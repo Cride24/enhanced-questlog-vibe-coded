@@ -1,0 +1,6 @@
+{
+  "name": "Tests Questlog — lot 4",
+  "icon": { "item": "minecraft:knowledge_book" },
+  "default_chapter": true,
+  "hidden": false
+}

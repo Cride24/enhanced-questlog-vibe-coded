@@ -1,0 +1,15 @@
+{
+  "title": "05 — Groupe répétable",
+  "description": "Fabriquez 8 planches de chêne ensemble. Réclame la récompense, rouvre la quête, répète-la et teste un reset MJ ciblé.",
+  "chapter": "questlog:main",
+  "sort_order": 50,
+  "icon": { "item": "minecraft:oak_planks" },
+  "group_quest": true,
+  "repeatable": true,
+  "objectives": [
+    { "type": "questlog:item_craft", "item": "minecraft:oak_planks", "required_amount": 8, "name": "Fabriquer 8 planches ensemble" }
+  ],
+  "rewards": [
+    { "type": "questlog:experience", "experience": 1, "name": "Un point d'expérience" }
+  ]
+}

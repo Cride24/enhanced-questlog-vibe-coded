@@ -11,6 +11,9 @@ import org.infernalstudios.questlog.core.quests.Quest;
 import org.infernalstudios.questlog.core.quests.objectives.Objective;
 import org.infernalstudios.questlog.core.validation.QuestValidation;
 
+import java.util.List;
+import java.util.UUID;
+
 public final class GroupProgressVerification {
     private static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("questlog", "group_check");
 
@@ -41,13 +44,43 @@ public final class GroupProgressVerification {
         objective.setCollectiveProgress((long) Integer.MAX_VALUE + 1, (long) Integer.MAX_VALUE + 2);
         check(!objective.isCompleted(), "Large totals do not complete through integer overflow");
 
+        objective.setCollectiveProgress(128, 128);
+        check(objective.getDisplay().isCompleted(), "Completed group objective is shown as complete");
         quest.resetProgress();
         check(quest.isGroupResetPending() && !quest.isCompleted(), "Targeted reset stays pending");
+        check(!objective.getDisplay().isCompleted() && objective.getDisplayedUnits() == 0,
+                "Reset clears the collective completion shown in quest details");
         objective.setUnits(1);
         check(!quest.isGroupResetPending(), "A new personal action releases the reset hold");
         Quest saved = quest(group);
         saved.deserialize(quest.serialize());
         check(saved.objectives.getFirst().getPersonalUnits() == 1, "Personal counter survives reload");
+
+        JsonObject nested = JsonParser.parseString("{\"title\":\"Nested group\",\"description\":\"Test\","
+                + "\"group_quest\":true,\"objectives\":[{\"type\":\"and\",\"objectives\":["
+                + "{\"type\":\"read\"},{\"type\":\"read\"}]}]}").getAsJsonObject();
+        Quest nestedQuest = quest(nested);
+        Objective combined = nestedQuest.objectives.getFirst();
+        combined.getChildren().forEach(child -> child.setCollectiveProgress(1, 1));
+        check(combined.isCompleted(), "Nested collective objectives can complete");
+        nestedQuest.resetProgress();
+        check(combined.getChildren().stream().noneMatch(Objective::isCompleted),
+                "Reset clears collective completion from nested objectives");
+
+        Quest waiting = quest(group);
+        waiting.resetProgress();
+        waiting.objectives.getFirst().forceSetUnits(64);
+        Quest contributing = quest(group);
+        contributing.objectives.getFirst().setUnits(80);
+        List<GroupProgress.Participant> members = List.of(
+                new GroupProgress.Participant(new UUID(0, 1), waiting, null, true),
+                new GroupProgress.Participant(new UUID(0, 2), contributing, null, false));
+        GroupProgress.applyObjective(waiting.objectives.getFirst(), 0, new int[0], members, true, null);
+        check(waiting.objectives.getFirst().getDisplayedUnits() == 80
+                        && waiting.objectives.getFirst().getDisplayedRequiredAmount() == 128,
+                "Reset member counts toward the quota but contributes zero until a new action");
+        check(!waiting.objectives.getFirst().getDisplay().isCompleted(),
+                "Waiting member's objective is not displayed as complete");
 
         Quest solo = quest(personal);
         solo.objectives.getFirst().setUnits(100);
@@ -61,7 +94,8 @@ public final class GroupProgressVerification {
         check(!GroupProgress.eligibleOffline(quest, offline, false), "Completed member is excluded");
         offline.putBoolean("completed", false);
         offline.putBoolean("group_reset_pending", true);
-        check(!GroupProgress.eligibleOffline(quest, offline, false), "Offline targeted reset is not instantly undone");
+        check(GroupProgress.eligibleOffline(quest, offline, false),
+                "Offline targeted reset still counts toward the participant quota");
         offline.putBoolean("group_reset_pending", false);
         check(!GroupProgress.eligibleOffline(quest, offline, true), "Inherited global completion excludes an offline member");
         offline.putBoolean("ignore_global_completion", true);
