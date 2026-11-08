@@ -1,6 +1,6 @@
 # Intégration de Questlog amont 3.5.4 dans Enhanced Questlog
 
-État préparé le 7 novembre 2026 sur `codex/integration-amont-3.5.4-1.21.1`. Cette intégration est destinée à **Minecraft 1.21.1 Fabric et NeoForge**. Elle n'est pas une validation en jeu.
+État préparé le 7 novembre 2026 sur `codex/integration-amont-3.5.4-1.21.1`, puis complété après retour en jeu le 8 novembre. Cette intégration est destinée à **Minecraft 1.21.1 Fabric et NeoForge**. La validation en jeu rapportée concerne NeoForge ; Fabric reste à essayer.
 
 ## Révisions et retour arrière
 
@@ -41,7 +41,7 @@ La fusion a réutilisé les implémentations amont lorsqu'elles couvraient déj�
 - `:1.21.1-fabric:build :1.21.1-neoforge:build -x test` réussit. `-x test` évite la tâche de tests classique sans cas JUnit ; les exécutables de vérification ci-dessus ont été lancés séparément. Les deux sources compilent et les JARs sont assemblés.
 - Les métadonnées à l'intérieur des deux JARs portent le nom, l'ID et la version attendus ; les classes de groupe, partage, écouteurs et liens de recettes, ainsi que `fr_fr.json`, y sont présentes. `git diff --check` est sans erreur.
 
-Les vérifications légères NeoForge ont été tentées : sous le nouvel outillage amont, leur démarrage direct s'arrête avant le code testé car `LoadingModList` n'est pas initialisé hors chargeur. Elles ont donc été exécutées avec le classpath Fabric. Cela ne prouve pas le fonctionnement NeoForge en jeu ; ses sources et son JAR compilent. Aucun client, serveur, profil ou monde Minecraft n'a été lancé ou modifié.
+Les vérifications légères NeoForge ont été tentées : sous le nouvel outillage amont, leur démarrage direct s'arrête avant le code testé car `LoadingModList` n'est pas initialisé hors chargeur. Elles ont donc été exécutées avec le classpath Fabric. Lors de ces contrôles initiaux, aucun client, serveur, profil ou monde Minecraft n'avait été lancé ou modifié.
 
 ## JARs d'essai
 
@@ -65,3 +65,9 @@ Créer une copie d'un monde et de profils de test. Noter chargeur, SHA du JAR, j
 5. Vérifier de nouveau le livre, les onglets et l'interface validée sur NeoForge, puis Fabric. Le tri entre plusieurs groupes distincts du lot 2 reste à vérifier lorsqu'un troisième joueur sera disponible.
 
 Le retour en jeu du 7 novembre sur `lot4.2` confirme seulement le scénario de reset et d'affichage alors signalé. Il ne valide pas cette intégration 3.5.4 ni toutes les étapes ci-dessus.
+
+## Retour en jeu du 8 novembre 2026
+
+Le pack de 17 quêtes et 2 chapitres a remplacé les anciens JSON du serveur NeoForge de test, après sauvegarde de `config/questlog`. Le JAR installé correspond au SHA-256 NeoForge ci-dessus. Le journal du serveur confirme le chargement de **17 quêtes et 2 chapitres**. L'utilisateur rapporte que les essais NeoForge se sont bien passés. Pour la quête 08, « aide » exécute `/help`, « page externe » ouvre le navigateur, et « copier » place bien `Questlog 3.5.4 OK` dans le presse-papiers ; aucun correctif n'a été nécessaire.
+
+Cette validation repose sur ce retour global : le détail de chaque scénario n'a pas été consigné individuellement. **Fabric n'a pas été testé en jeu** ; le scénario entre plusieurs groupes distincts attend un troisième joueur.
