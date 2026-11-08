@@ -168,6 +168,12 @@ Ces opérations sont des interventions administratives contrôlées côté serve
 
 ## 6. Récompenses et butin
 
+### État visible après récupération des récompenses
+
+À réaliser dans le lot 5 : lorsqu'une quête est validée et que le panneau droit n'a plus de récompense à présenter au joueur, afficher une mention « Completed » clairement lisible et soignée, dans le style graphique de Questlog, au centre de l'espace disponible. Le libellé est traduisible (« Terminée » en français).
+
+Cet état concerne les quêtes personnelles comme celles de groupe, y compris les quêtes sans récompense. Il ne remplace pas les récompenses encore disponibles, les indications d'attribution en attente ou les actions utiles, notamment la réinitialisation d'une quête répétable. Après réinitialisation, la mention disparaît tant que la quête n'est pas à nouveau validée : les objectifs et les récompenses du nouveau cycle retrouvent leur affichage normal, sans conserver l'état visuel de réussite du cycle précédent. Les récompenses ne deviennent récupérables que selon les conditions normales du nouveau cycle.
+
 ### Bénéficiaires
 
 Chaque récompense a ses propres destinataires. Pour une récompense de groupe :
