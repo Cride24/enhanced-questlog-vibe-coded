@@ -44,7 +44,8 @@ public record QuestResetPacket(ResourceLocation id) implements CustomPacketPaylo
     public static void handle(QuestResetPacket packet, IPacketContext ctx) {
         QuestManager manager = ServerPlayerManager.INSTANCE.getManagerByPlayer(Objects.requireNonNull(ctx.getSender()));
         Quest quest = manager.getQuest(packet.id);
-        if (quest != null && quest.isActive() && quest.isRepeatable() && quest.isCompleted() && quest.isRewarded()) {
+        if (quest != null && quest.isActive() && quest.isRepeatable() && quest.hasSentCompletion
+                && quest.isRewarded() && !quest.hasPendingRewards()) {
             if (quest.isGlobal()) {
                 ServerPlayerManager.INSTANCE.resetGlobalQuest(quest.getId());
             } else {

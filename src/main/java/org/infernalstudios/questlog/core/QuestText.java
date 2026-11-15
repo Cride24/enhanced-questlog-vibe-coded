@@ -68,7 +68,10 @@ public final class QuestText {
         if (!source.isJsonObject()) return source.deepCopy();
         JsonObject object = new JsonObject();
         source.getAsJsonObject().entrySet().forEach(entry -> {
-            boolean presentation = source.getAsJsonObject().has("type") && (isKey(entry.getKey(),ALL_FIELDS) || entry.getKey().equals("translatable"));
+            boolean presentation = source.getAsJsonObject().has("type") && (isKey(entry.getKey(),ALL_FIELDS)
+                    || entry.getKey().equals("translatable")
+                    || entry.getKey().equals("information") && source.getAsJsonObject().get("type").isJsonPrimitive()
+                    && source.getAsJsonObject().get("type").getAsString().replace("questlog:", "").equals("information"));
             if (!presentation) object.add(entry.getKey(), Set.of("prerequisites","requirements","objectives","objective","failures","rewards","choices","entries").contains(entry.getKey())
                     ? gameplay(entry.getValue()) : entry.getValue().deepCopy());
         });

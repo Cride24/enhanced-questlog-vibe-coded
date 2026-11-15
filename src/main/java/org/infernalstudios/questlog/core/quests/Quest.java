@@ -42,6 +42,10 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
     private boolean perParticipant = false;
     private int participantCount;
     private boolean groupResetPending;
+    private String rewardCycle = "";
+    private boolean resetCycle;
+    private String combatReferencePath = "";
+    private List<java.util.UUID> combatReference = List.of();
     private boolean active = true;
     private boolean functional = true;
     private JsonObject definition;
@@ -49,6 +53,7 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
     private CompoundTag suspendedProgress;
     private boolean ignoreGlobalCompletion;
     private boolean inheritedGlobalCompletion;
+    private boolean globalCompletionNoticeSeen;
     private boolean sharedAccess;
     private String offeredBy = "";
     private String offerVersion = "";
@@ -166,12 +171,25 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
         return this.global;
     }
 
+    public boolean globalCompletionNoticeSeen() { return this.globalCompletionNoticeSeen; }
+    public void markGlobalCompletionNoticeSeen() { this.globalCompletionNoticeSeen = true; }
+
     public boolean isShareable() { return this.shareable; }
     public boolean isGroupQuest() { return this.groupQuest; }
     public boolean isPerParticipant() { return this.perParticipant; }
     public int getParticipantCount() { return this.participantCount; }
     public void setParticipantCount(int count) { this.participantCount = Math.max(0, count); }
     public boolean isGroupResetPending() { return this.groupResetPending; }
+    public String rewardCycle() { return this.rewardCycle; }
+    public void setRewardCycle(String cycle) { this.rewardCycle = cycle; }
+    public boolean isResetCycle() { return this.resetCycle; }
+    public void setCombatReference(String path, List<java.util.UUID> players) {
+        this.combatReferencePath = path;
+        this.combatReference = List.copyOf(players);
+    }
+    public List<java.util.UUID> combatReference(String path) {
+        return path.equals(this.combatReferencePath) ? this.combatReference : List.of();
+    }
     public void onNewContribution() { this.groupResetPending = false; }
     public boolean isProgressObjective(Objective target) {
         for (Objective objective : this.objectives) if (contains(objective, target)) return true;
@@ -225,9 +243,14 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
     }
 
     public void resetProgress(boolean ignoreGlobalCompletion) {
+        this.rewardCycle = java.util.UUID.randomUUID().toString();
+        this.resetCycle = true;
+        this.combatReferencePath = "";
+        this.combatReference = List.of();
         this.groupResetPending = this.groupQuest;
         this.ignoreGlobalCompletion = ignoreGlobalCompletion;
         this.inheritedGlobalCompletion = false;
+        this.globalCompletionNoticeSeen = false;
         this.suspendedProgress = null;
         this.objectives.forEach(Objective::clearCollectiveProgress);
         this.prerequisites.forEach(trigger -> trigger.forceSetUnits(0));
@@ -276,7 +299,7 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
 
     public boolean isRewarded() {
         for (Reward reward : this.rewards) {
-            if (!reward.hasRewarded()) {
+            if (reward.isEligible() && !reward.hasRewarded()) {
                 return false;
             }
         }
@@ -292,7 +315,11 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
     }
 
     public boolean hasPendingRewards() {
-        return this.canClaimRewards() && !this.isRewarded();
+        if (!this.canClaimRewards()) return false;
+        if (!this.isRewarded()) return true;
+        return this.rewards.stream().anyMatch(reward -> reward.onePerGroup() && !reward.allocationId().isEmpty()
+                && (reward.allocationState() == org.infernalstudios.questlog.core.GroupRewards.READY
+                || reward.allocationState() == org.infernalstudios.questlog.core.GroupRewards.VOTING));
     }
 
     public void grantGlobalCompletion() {
@@ -310,7 +337,12 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
         data.putBoolean("triggered", this.hasSentTrigger);
         data.putBoolean("ignore_global_completion", this.ignoreGlobalCompletion);
         data.putBoolean("group_reset_pending", this.groupResetPending);
+        data.putString("reward_cycle", this.rewardCycle);
+        data.putBoolean("reset_cycle", this.resetCycle);
+        data.putString("combat_reference_path", this.combatReferencePath);
+        data.put("combat_reference", combatReferenceTag());
         data.putBoolean("global_completion_inherited", this.inheritedGlobalCompletion);
+        data.putBoolean("global_notice_seen", this.globalCompletionNoticeSeen);
         data.putBoolean("shared_access", this.sharedAccess);
         data.putString("offered_by", this.offeredBy);
         data.putString("offer_version", this.offerVersion);
@@ -362,7 +394,12 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
         this.hasSentTrigger = data.getBoolean("triggered");
         this.ignoreGlobalCompletion = data.getBoolean("ignore_global_completion");
         this.groupResetPending = data.getBoolean("group_reset_pending");
+        this.rewardCycle = data.getString("reward_cycle");
+        this.resetCycle = data.getBoolean("reset_cycle");
+        this.combatReferencePath = data.getString("combat_reference_path");
+        this.combatReference = readCombatReference(data);
         this.inheritedGlobalCompletion = data.getBoolean("global_completion_inherited");
+        this.globalCompletionNoticeSeen = data.getBoolean("global_notice_seen");
         this.sharedAccess = data.getBoolean("shared_access");
         this.offeredBy = data.getString("offered_by");
         this.offerVersion = data.getString("offer_version");
@@ -402,7 +439,12 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
         tag.putBoolean("triggered", this.hasSentTrigger);
         tag.putBoolean("ignore_global_completion", this.ignoreGlobalCompletion);
         tag.putBoolean("group_reset_pending", this.groupResetPending);
+        tag.putString("reward_cycle", this.rewardCycle);
+        tag.putBoolean("reset_cycle", this.resetCycle);
+        tag.putString("combat_reference_path", this.combatReferencePath);
+        tag.put("combat_reference", combatReferenceTag());
         tag.putBoolean("global_completion_inherited", this.inheritedGlobalCompletion);
+        tag.putBoolean("global_notice_seen", this.globalCompletionNoticeSeen);
         tag.putBoolean("shared_access", this.sharedAccess);
         tag.putString("offered_by", this.offeredBy);
         tag.putString("offer_version", this.offerVersion);
@@ -413,6 +455,25 @@ public class Quest implements NbtSaveable, WithDisplayData<QuestDisplayData> {
         tag.put("rewards", Util.toNbtList(this.rewards, Reward::serialize));
         if (this.definition != null) tag.putString("_structure", structure().toString());
         return tag;
+    }
+
+    private net.minecraft.nbt.ListTag combatReferenceTag() {
+        net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
+        for (java.util.UUID id : this.combatReference) {
+            CompoundTag row = new CompoundTag();
+            row.putUUID("id", id);
+            list.add(row);
+        }
+        return list;
+    }
+
+    private static List<java.util.UUID> readCombatReference(CompoundTag data) {
+        List<java.util.UUID> result = new ArrayList<>();
+        for (Tag item : data.getList("combat_reference", Tag.TAG_COMPOUND)) {
+            CompoundTag row = (CompoundTag) item;
+            if (row.hasUUID("id")) result.add(row.getUUID("id"));
+        }
+        return result;
     }
 
     private JsonObject structure() {

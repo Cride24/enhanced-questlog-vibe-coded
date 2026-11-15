@@ -25,10 +25,10 @@ import java.util.List;
 *///?}
 
 //? if >=1.21 {
-public record QuestRewardCollectPacket(ResourceLocation id, int rewardIndex,
+public record QuestRewardCollectPacket(ResourceLocation id, int rewardIndex, String cycle,
                                        java.util.List<Integer> selections) implements CustomPacketPayload {
 //?} else {
-//public record QuestRewardCollectPacket(ResourceLocation id, int rewardIndex, List<Integer> selections) {
+//public record QuestRewardCollectPacket(ResourceLocation id, int rewardIndex, String cycle, List<Integer> selections) {
 //?}
     //? if >=1.21 {
     public static final Type<QuestRewardCollectPacket> TYPE = new Type<>(Questlog.id("reward_collect"));
@@ -36,6 +36,7 @@ public record QuestRewardCollectPacket(ResourceLocation id, int rewardIndex,
     public static final StreamCodec<RegistryFriendlyByteBuf, QuestRewardCollectPacket> STREAM_CODEC = StreamCodec.composite(
             ResourceLocation.STREAM_CODEC, QuestRewardCollectPacket::id,
             ByteBufCodecs.INT, QuestRewardCollectPacket::rewardIndex,
+            ByteBufCodecs.STRING_UTF8, QuestRewardCollectPacket::cycle,
             ByteBufCodecs.collection(java.util.ArrayList::new, ByteBufCodecs.INT), QuestRewardCollectPacket::selections,
             QuestRewardCollectPacket::new
     );
@@ -45,17 +46,19 @@ public record QuestRewardCollectPacket(ResourceLocation id, int rewardIndex,
     public static QuestRewardCollectPacket decode(FriendlyByteBuf buf) {
         ResourceLocation id = buf.readResourceLocation();
         int rewardIndex = buf.readInt();
+        String cycle = buf.readUtf();
         int selectionCount = buf.readVarInt();
         List<Integer> selections = new ArrayList<>(selectionCount);
         for (int i = 0; i < selectionCount; i++) {
             selections.add(buf.readInt());
         }
-        return new QuestRewardCollectPacket(id, rewardIndex, selections);
+        return new QuestRewardCollectPacket(id, rewardIndex, cycle, selections);
     }
 
     public void encode(FriendlyByteBuf buf) {
         buf.writeResourceLocation(this.id);
         buf.writeInt(this.rewardIndex);
+        buf.writeUtf(this.cycle);
         buf.writeVarInt(this.selections.size());
         for (int sel : this.selections) {
             buf.writeInt(sel);
@@ -66,22 +69,26 @@ public record QuestRewardCollectPacket(ResourceLocation id, int rewardIndex,
     public static void handle(QuestRewardCollectPacket packet, IPacketContext ctx) {
         QuestManager manager = ServerPlayerManager.INSTANCE.getManagerByPlayer(Objects.requireNonNull(ctx.getSender()));
         Quest quest = manager.getQuest(packet.id);
-        if (quest == null || !quest.isActive() || !quest.isTriggered() || !quest.isCompleted()) {
+        if (quest == null || !quest.isActive() || !quest.isTriggered() || !quest.hasSentCompletion) {
             Questlog.LOGGER.warn("Quest {} not found", packet.id);
             return;
         }
-        if (!quest.canClaimRewards()) return;
+        if (!quest.canClaimRewards() || !quest.rewardCycle().equals(packet.cycle)) return;
         if (packet.rewardIndex < 0 || packet.rewardIndex >= quest.rewards.size()) return;
         Reward reward = quest.rewards.get(packet.rewardIndex);
         if (reward == null) {
             Questlog.LOGGER.warn("Reward {} not found in quest {}", packet.rewardIndex, packet.id);
             return;
         }
-        if (!reward.hasRewarded()) {
+        if (reward.isEligible() && !reward.hasRewarded()) {
             if (reward instanceof org.infernalstudios.questlog.core.quests.rewards.ChoiceReward choiceReward) {
                 choiceReward.setSelectedIndices(packet.selections());
                 if (!choiceReward.canClaim()) return;
             }
+            if (!reward.canDeliver((ServerPlayer) manager.player)) return;
+            if (reward.onePerGroup() && (org.infernalstudios.questlog.core.GroupRewards.INSTANCE == null
+                    || !org.infernalstudios.questlog.core.GroupRewards.INSTANCE.claim(quest, packet.rewardIndex,
+                    manager.player.getUUID()))) return;
             reward.applyReward((ServerPlayer) manager.player);
             ServerPlayerManager.INSTANCE.save(manager);
         }

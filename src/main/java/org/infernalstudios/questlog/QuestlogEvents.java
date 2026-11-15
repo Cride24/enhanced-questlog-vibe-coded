@@ -9,6 +9,7 @@ import org.infernalstudios.questlog.commands.QuestlogCommands;
 import org.infernalstudios.questlog.core.DefinitionUtil;
 import org.infernalstudios.questlog.core.AdventureGroups;
 import org.infernalstudios.questlog.core.GroupProgress;
+import org.infernalstudios.questlog.core.GroupRewards;
 import org.infernalstudios.questlog.core.QuestManager;
 import org.infernalstudios.questlog.core.ServerPlayerManager;
 import org.infernalstudios.questlog.core.quests.objectives.ObjectiveListeners;
@@ -27,6 +28,7 @@ public class QuestlogEvents {
         ServerPlayerManager.INSTANCE = new ServerPlayerManager(server);
         ServerPlayerManager.INSTANCE.load();
         AdventureGroups.INSTANCE = new AdventureGroups(server);
+        GroupRewards.INSTANCE = new GroupRewards(server);
         GroupProgress.refreshAll();
     }
 
@@ -42,12 +44,18 @@ public class QuestlogEvents {
             AdventureGroups.INSTANCE.save();
             AdventureGroups.INSTANCE = null;
         }
+        GroupRewards.INSTANCE = null;
         if (ServerPlayerManager.INSTANCE != null) {
             ServerPlayerManager.INSTANCE.save();
             ServerPlayerManager.INSTANCE = null;
         }
         Questlog.EVENTS.removeAllListeners();
         ObjectiveListeners.clear();
+        org.infernalstudios.questlog.core.CombatContributions.clear();
+    }
+
+    public static void onServerTick() {
+        if (GroupRewards.INSTANCE != null) GroupRewards.INSTANCE.tick();
     }
 
     public static void onServerPlayerLogin(ServerPlayer player) {
@@ -56,15 +64,35 @@ public class QuestlogEvents {
         ServerPlayerManager.INSTANCE.load(manager);
         if (AdventureGroups.INSTANCE != null) AdventureGroups.INSTANCE.onLogin(player);
         GroupProgress.refreshAll();
+        if (GroupRewards.INSTANCE != null) {
+            for (var quest : manager.getAllQuests()) GroupRewards.INSTANCE.reconcile(quest);
+        }
         boolean claimedOfflineReward = false;
         for (var quest : manager.getAllQuests()) {
             if (!quest.isGroupQuest() || !quest.hasSentCompletion || !quest.canClaimRewards()) continue;
-            for (Reward reward : quest.rewards) if (reward.isAutoClaim() && !reward.hasRewarded()) {
-                reward.applyReward(player);
-                claimedOfflineReward = true;
+            for (Reward reward : quest.rewards) if (reward.isEligible() && reward.isAutoClaim() && !reward.hasRewarded()) {
+                if (reward.canDeliver(player) && (!reward.onePerGroup() || GroupRewards.INSTANCE != null
+                        && GroupRewards.INSTANCE.claim(quest, quest.rewards.indexOf(reward), player.getUUID()))) {
+                    reward.applyReward(player);
+                    claimedOfflineReward = true;
+                }
             }
         }
         if (claimedOfflineReward) ServerPlayerManager.INSTANCE.save(manager);
+
+        int pendingRewards = 0;
+        for (var quest : manager.getAllQuests()) {
+            if (!quest.isActive() || !quest.hasSentCompletion || !quest.canClaimRewards()) continue;
+            for (int i = 0; i < quest.rewards.size(); i++) {
+                Reward reward = quest.rewards.get(i);
+                if (reward.isEligible() && !reward.hasRewarded() && (!reward.onePerGroup()
+                        || GroupRewards.INSTANCE != null && GroupRewards.INSTANCE.canClaim(quest, i, player.getUUID())))
+                    pendingRewards++;
+            }
+        }
+        if (pendingRewards > 0) player.sendSystemMessage(Component.translatable(
+                pendingRewards == 1 ? "questlog.reward.pending_login_one" : "questlog.reward.pending_login_many",
+                pendingRewards));
 
         if (QuestlogMigrator.showDatapackWarning && player.hasPermissions(2)) {
             player.sendSystemMessage(Component.literal("§e[Questlog] Warning: Quests are now loaded from the config folder. Datapacks are no longer supported! Your old datapack quests were automatically migrated."));
@@ -92,9 +120,12 @@ public class QuestlogEvents {
                 Services.PLATFORM.sendPacketToClient((ServerPlayer) event.player, new QuestCompletedPacket(event.quest.getId()));
 
             for (Reward reward : event.quest.rewards) {
-                if (event.quest.canClaimRewards() && reward.isAutoClaim()) {
+                if (event.quest.canClaimRewards() && reward.isEligible() && reward.isAutoClaim()) {
                     if (!reward.hasRewarded()) {
-                        reward.applyReward((ServerPlayer) event.player);
+                        ServerPlayer player = (ServerPlayer) event.player;
+                        if (reward.canDeliver(player) && (!reward.onePerGroup() || GroupRewards.INSTANCE != null
+                                && GroupRewards.INSTANCE.claim(event.quest, event.quest.rewards.indexOf(reward), player.getUUID())))
+                            reward.applyReward(player);
                     }
                 }
             }

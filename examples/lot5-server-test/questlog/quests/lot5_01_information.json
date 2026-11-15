@@ -1,0 +1,13 @@
+{
+  "title": "01 — Information personnelle",
+  "description": "Lire la quête, récupérer l'information, puis rouvrir la quête pour vérifier que le texte reste visible.",
+  "chapter": "questlog:main",
+  "sort_order": 10,
+  "icon": { "item": "minecraft:map" },
+  "objectives": [{ "type": "questlog:read", "name": "Lire la quête" }],
+  "rewards": [{
+    "type": "questlog:information",
+    "name": "Indice du portail",
+    "information": "Dans le Nether : X 24, Y 68, Z -32. Cherchez sous le pont de basalte."
+  }]
+}

@@ -172,7 +172,7 @@ public class QuestlogCommands {
             }
         }
 
-        ctx.getSource().sendSuccess(() -> Component.literal("Reloaded " + questCount + " quests and " + chapterCount + " chapters from config."), true);
+        ctx.getSource().sendSuccess(() -> Component.literal("Reloaded " + questCount + " quests and " + chapterCount + " chapters from config."), false);
         return questCount;
     }
 
@@ -204,7 +204,7 @@ public class QuestlogCommands {
             }
         }
 
-        ctx.getSource().sendSuccess(() -> Component.literal("Successfully reloaded " + questCount + " quests / " + chapterCount + " chapters, and reset progress for " + players.size() + " player(s)."), true);
+        ctx.getSource().sendSuccess(() -> Component.literal("Successfully reloaded " + questCount + " quests / " + chapterCount + " chapters, and reset progress for " + players.size() + " player(s)."), false);
         return players.size();
     }
 
@@ -222,7 +222,7 @@ public class QuestlogCommands {
         manager.setEditMode(enabled);
         ServerPlayerManager.INSTANCE.save(manager);
         ServerPlayerManager.INSTANCE.syncPlayer(manager);
-        ctx.getSource().sendSuccess(() -> Component.literal("Edit mode for " + player.getName().getString() + " set to " + enabled), true);
+        ctx.getSource().sendSuccess(() -> Component.literal("Edit mode for " + player.getName().getString() + " set to " + enabled), false);
         return 1;
     }
 
@@ -254,7 +254,7 @@ public class QuestlogCommands {
         }
 
         final int finalCount = count;
-        ctx.getSource().sendSuccess(() -> Component.literal("Successfully triggered " + finalCount + " quests across " + players.size() + " player(s)."), true);
+        ctx.getSource().sendSuccess(() -> Component.literal("Successfully triggered " + finalCount + " quests across " + players.size() + " player(s)."), false);
         return finalCount;
     }
 
@@ -288,7 +288,7 @@ public class QuestlogCommands {
 
         String action = complete ? "Completed" : "Reset";
         final int fModified = modified;
-        ctx.getSource().sendSuccess(() -> Component.literal(action + " progress for " + fModified + " quests across " + players.size() + " player(s)."), true);
+        ctx.getSource().sendSuccess(() -> Component.literal(action + " progress for " + fModified + " quests across " + players.size() + " player(s)."), false);
         return modified;
     }
 
@@ -308,7 +308,7 @@ public class QuestlogCommands {
             ctx.getSource().sendFailure(Component.literal("Could not reset quest data for " + playerId));
             return 0;
         }
-        ctx.getSource().sendSuccess(() -> Component.literal("Reset " + questId + " for " + playerId), true);
+        ctx.getSource().sendSuccess(() -> Component.literal("Reset " + questId + " for " + playerId), false);
         return 1;
     }
 
@@ -322,7 +322,7 @@ public class QuestlogCommands {
             ctx.getSource().sendFailure(Component.literal("Could not reset all saved players for " + questId));
             return 0;
         }
-        ctx.getSource().sendSuccess(() -> Component.literal("Reset " + questId + " for " + count + " saved player(s)"), true);
+        ctx.getSource().sendSuccess(() -> Component.literal("Reset " + questId + " for " + count + " saved player(s)"), false);
         return count;
     }
 
@@ -336,7 +336,7 @@ public class QuestlogCommands {
             ServerPlayerManager.INSTANCE.syncPlayer(manager);
         }
 
-        ctx.getSource().sendSuccess(() -> Component.literal("Successfully reset all quest progress for " + players.size() + " player(s)."), true);
+        ctx.getSource().sendSuccess(() -> Component.literal("Successfully reset all quest progress for " + players.size() + " player(s)."), false);
         return players.size();
     }
 
@@ -354,7 +354,7 @@ public class QuestlogCommands {
             ServerPlayerManager.INSTANCE.syncPlayer(manager);
         }
 
-        ctx.getSource().sendSuccess(() -> Component.literal("Successfully completed all quests for " + players.size() + " player(s)."), true);
+        ctx.getSource().sendSuccess(() -> Component.literal("Successfully completed all quests for " + players.size() + " player(s)."), false);
         return players.size();
     }
 

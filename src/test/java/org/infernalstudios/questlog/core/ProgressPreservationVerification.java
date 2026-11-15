@@ -107,15 +107,28 @@ public final class ProgressPreservationVerification {
         globalSource.objectives.get(0).forceSetUnits(1);
         globalSource.hasSentCompletion = true;
         check(globalSource.canClaimRewards(), "The player completing a global quest can claim its reward");
+        check(!globalSource.globalCompletionNoticeSeen(), "A new global completion may be announced");
+        globalSource.markGlobalCompletionNoticeSeen();
+        Quest seenAfterLogin = quest(1, 5, false, true);
+        seenAfterLogin.deserialize(globalSource.serialize());
+        check(seenAfterLogin.globalCompletionNoticeSeen(), "Global completion announcement is not repeated on login");
+        CompoundTag legacyGlobal = globalSource.serialize();
+        legacyGlobal.remove("global_notice_seen");
+        seenAfterLogin.deserialize(legacyGlobal);
+        check(!seenAfterLogin.globalCompletionNoticeSeen(), "Existing global completions may be announced once after upgrade");
         Quest inherited = quest(1, 5, false, true);
         check(ServerPlayerManager.mergeGlobalCompletion(inherited, globalData) && inherited.isCompleted(),
                 "Global completion reaches an existing or new player");
+        check(!inherited.globalCompletionNoticeSeen(), "An offline player may receive a single global completion notice");
+        inherited.markGlobalCompletionNoticeSeen();
         check(!inherited.isRewarded(), "Global completion does not copy another player's reward receipt");
         check(!inherited.canClaimRewards(), "An inherited global completion does not grant a reward");
         Quest inheritedAfterLogin = quest(1, 5, false, true);
         inheritedAfterLogin.deserialize(inherited.serialize());
         check(!inheritedAfterLogin.canClaimRewards(), "Reward restriction survives reconnection");
+        check(inheritedAfterLogin.globalCompletionNoticeSeen(), "Offline global notice remains acknowledged");
         inheritedAfterLogin.resetProgress(true);
+        check(!inheritedAfterLogin.globalCompletionNoticeSeen(), "Reset permits a notice for a later global completion");
         inheritedAfterLogin.objectives.get(0).forceSetUnits(1);
         check(inheritedAfterLogin.canClaimRewards() && inheritedAfterLogin.isCompleted(),
                 "A personally reset global quest can be completed for its reward");

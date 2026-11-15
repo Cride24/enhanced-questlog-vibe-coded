@@ -1,0 +1,6 @@
+{
+  "name": "Tests Questlog — lot 5",
+  "icon": { "item": "minecraft:book" },
+  "default_chapter": true,
+  "hidden": false
+}

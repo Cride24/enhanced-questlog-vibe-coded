@@ -80,6 +80,13 @@ public class ChoiceReward extends Reward {
     }
 
     @Override
+    public boolean canDeliver(ServerPlayer player) {
+        for (int index : this.selectedIndices)
+            if (index < 0 || index >= this.choices.size() || !this.choices.get(index).canDeliver(player)) return false;
+        return true;
+    }
+
+    @Override
     public void applyReward(ServerPlayer player) {
         if (this.getParent() != null && !this.getParent().isActive()) return;
         for (int index : this.selectedIndices) {

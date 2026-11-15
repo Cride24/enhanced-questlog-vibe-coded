@@ -29,6 +29,8 @@ public class ScrollableInfo implements Scrollable, GuiEventListener {
     private final boolean showRewardPreviews;
     private List<InfoEntry> entries;
     private boolean entriesCompleted;
+    private boolean entriesPreviewing;
+    private boolean entriesPending;
     @Nullable
     private ScrollableComponent parent = null;
 
@@ -39,24 +41,34 @@ public class ScrollableInfo implements Scrollable, GuiEventListener {
     }
 
     private boolean isPreviewing() {
-        return this.showRewardPreviews && !this.questDetails.quest.isCompleted();
+        return (this.showRewardPreviews || this.questDetails.quest.isResetCycle()) && !this.questDetails.quest.hasSentCompletion;
     }
 
     private List<InfoEntry> getEntries() {
-        boolean completed = this.questDetails.quest.isCompleted();
-        if (this.entries == null || this.entriesCompleted != completed) {
+        boolean completed = this.questDetails.quest.hasSentCompletion;
+        boolean pending = this.questDetails.quest.hasPendingRewards();
+        if (this.entries == null || this.entriesCompleted != completed || this.entriesPreviewing != this.isPreviewing()
+                || this.entriesPending != pending) {
             this.entries = new ArrayList<>();
             if (!completed) {
                 for (ObjectiveDisplayData datum : this.display.getObjectiveDisplayData()) {
                     this.entries.add(new InfoEntry(this.questDetails, datum, 0, 0));
                 }
             }
-            if (completed || this.showRewardPreviews) {
+            if ((completed && pending) || this.isPreviewing()) {
                 for (RewardDisplayData datum : this.display.getRewardDisplayData()) {
                     this.entries.add(new InfoEntry(this.questDetails, datum, 0, 0, display));
                 }
+            } else if (completed) {
+                for (RewardDisplayData datum : this.display.getRewardDisplayData()) {
+                    if (datum.getReward() instanceof org.infernalstudios.questlog.core.quests.rewards.InformationReward info
+                            && !info.revealed().isBlank())
+                        this.entries.add(new InfoEntry(this.questDetails, datum, 0, 0, display));
+                }
             }
             this.entriesCompleted = completed;
+            this.entriesPreviewing = this.isPreviewing();
+            this.entriesPending = pending;
         }
         return this.entries;
     }
@@ -90,8 +102,8 @@ public class ScrollableInfo implements Scrollable, GuiEventListener {
         int y = this.parent != null ? (int) this.parent.getYOffset() : 0;
         int width = this.parent != null ? this.parent.width : this.display.getRightPanelWidth() - 36;
         Font font = Minecraft.getInstance().font;
-        Component topTitle = this.questDetails.quest.isCompleted()
-                || (this.showRewardPreviews && this.display.getObjectiveDisplayData().isEmpty())
+        Component topTitle = this.questDetails.quest.hasSentCompletion
+                || (this.isPreviewing() && this.display.getObjectiveDisplayData().isEmpty())
                 ? Component.translatable("questlog.info.rewards")
                 : Component.translatable("questlog.info.objectives");
         int titleX = x + (width - font.width(topTitle)) / 2;
@@ -137,7 +149,7 @@ public class ScrollableInfo implements Scrollable, GuiEventListener {
             double entryY = this.getEntryY(i);
             InfoEntry entry = entries.get(i);
             if (mouseY >= entryY && mouseY < entryY + entry.getHeight()) {
-                if (!this.questDetails.quest.isCompleted()) {
+                if (!this.questDetails.quest.hasSentCompletion) {
                     int width = (this.parent != null ? this.parent.width : this.display.getRightPanelWidth() - 36) - 15;
                     return i < this.display.getObjectiveDisplayData().size()
                             && mouseX >= 0 && mouseX < width

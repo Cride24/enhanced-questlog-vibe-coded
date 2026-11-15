@@ -77,6 +77,15 @@ public class InfoEntry implements Renderable, GuiEventListener {
 
         if (isReward) {
             this.drawRewardStatus(ps, textX);
+            if (rewardData.getReward() instanceof org.infernalstudios.questlog.core.quests.rewards.InformationReward info
+                    && !info.revealed().isBlank()) {
+                int lineY = this.getStatusY() + font.lineHeight + 3;
+                int width = Math.max(1, maxWidth);
+                for (net.minecraft.util.FormattedCharSequence line : font.split(Component.literal(info.revealed()), width)) {
+                    ps.drawString(font, line, textX, lineY, questDetails.getPalette().textColor(), false);
+                    lineY += font.lineHeight;
+                }
+            }
         } else {
             this.drawObjectiveStatus(ps, textX);
         }
@@ -98,11 +107,19 @@ public class InfoEntry implements Renderable, GuiEventListener {
     }
 
     public int getHeight() {
+        if (rewardData != null && rewardData.getReward() instanceof org.infernalstudios.questlog.core.quests.rewards.InformationReward info
+                && !info.revealed().isBlank() && Minecraft.getInstance() != null) {
+            Font font = Minecraft.getInstance().font;
+            int width = Math.max(1, questDetails.getDisplay().getRightPanelWidth() - 51);
+            return Math.max(INFO_ENTRY_HEIGHT, getNameHeight() + 17
+                    + font.split(Component.literal(info.revealed()), width).size() * font.lineHeight + 4);
+        }
         return Math.max(INFO_ENTRY_HEIGHT, this.getNameHeight() + 17);
     }
 
     private void drawRewardStatus(GuiGraphics ps, int textX) {
-        if (!this.questDetails.quest.isCompleted()
+        if (!this.questDetails.quest.hasSentCompletion
+                || rewardData.getReward() != null && !rewardData.getReward().isEligible()
                 || rewardData.getReward() != null && rewardData.getReward().getContainer() != null) {
             return;
         }

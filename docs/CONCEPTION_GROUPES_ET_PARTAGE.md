@@ -174,6 +174,14 @@ Ces opérations sont des interventions administratives contrôlées côté serve
 
 Cet état concerne les quêtes personnelles comme celles de groupe, y compris les quêtes sans récompense. Il ne remplace pas les récompenses encore disponibles, les indications d'attribution en attente ou les actions utiles, notamment la réinitialisation d'une quête répétable. Après réinitialisation, la mention disparaît tant que la quête n'est pas à nouveau validée : les objectifs et les récompenses du nouveau cycle retrouvent leur affichage normal, sans conserver l'état visuel de réussite du cycle précédent. Les récompenses ne deviennent récupérables que selon les conditions normales du nouveau cycle.
 
+### Récompense d'information
+
+À réaliser dans le lot 5 : proposer une récompense « Information » dont le contenu est un texte rédigé par l'auteur, par exemple un indice, un fragment d'histoire ou des coordonnées avec le nom de la dimension. Elle utilise les règles de destinataires des récompenses, sans créer un système de diffusion propre à ce type.
+
+Le contenu est révélé au bénéficiaire lors de l'obtention et reste consultable ensuite dans la quête ; la mention « Completed » ne doit pas masquer cette information. Pour une quête répétable réinitialisée, les objectifs et récompenses retrouvent leur affichage de nouveau cycle.
+
+Les coordonnées écrites dans ce texte sont renseignées par l'auteur. La capture automatique d'une position découverte et son insertion dans le texte ne font pas partie de cet ajout simple.
+
 ### Bénéficiaires
 
 Chaque récompense a ses propres destinataires. Pour une récompense de groupe :

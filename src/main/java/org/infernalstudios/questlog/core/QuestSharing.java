@@ -1,5 +1,7 @@
 package org.infernalstudios.questlog.core;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -20,6 +22,24 @@ public final class QuestSharing {
 
     public static boolean maySendDefinition(Quest quest, boolean authorMode) {
         return authorMode || quest.isVisibleToPlayer() || quest.isOffered();
+    }
+
+    public static JsonObject visibleDefinition(JsonObject source, boolean authorMode) {
+        JsonObject copy = source.deepCopy();
+        if (!authorMode) concealInformation(copy);
+        return copy;
+    }
+
+    private static void concealInformation(JsonElement element) {
+        if (element.isJsonArray()) {
+            element.getAsJsonArray().forEach(QuestSharing::concealInformation);
+        } else if (element.isJsonObject()) {
+            JsonObject object = element.getAsJsonObject();
+            if (object.has("type") && object.get("type").isJsonPrimitive()
+                    && object.get("type").getAsString().replace("questlog:", "").equals("information"))
+                object.remove("information");
+            object.entrySet().forEach(entry -> concealInformation(entry.getValue()));
+        }
     }
 
     public static boolean canSeeAllDefinitions(ServerPlayer player, QuestManager manager) {

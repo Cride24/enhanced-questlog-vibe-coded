@@ -227,6 +227,8 @@ public class QuestManager {
                 if (!quest.isGroupQuest() && !quest.hasSentCompletion && quest.isCompleted()) {
                     quest.hasSentCompletion = true;
                     QuestlogEvents.onQuestCompleted(new QuestEvent.Completed(this.player, quest, true));
+                    if (available) Services.PLATFORM.sendPacketToClient(serverPlayer,
+                            new QuestDataPacket(id, quest.serialize()));
                     Questlog.LOGGER.trace("Sent quest completed event for {}", id);
 
                     if (quest.isGlobal() && ServerPlayerManager.INSTANCE != null) {

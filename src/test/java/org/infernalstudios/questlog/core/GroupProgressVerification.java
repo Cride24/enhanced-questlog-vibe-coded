@@ -84,6 +84,8 @@ public final class GroupProgressVerification {
         List<GroupProgress.Participant> members = List.of(
                 new GroupProgress.Participant(new UUID(0, 1), waiting, null, true),
                 new GroupProgress.Participant(new UUID(0, 2), contributing, null, false));
+        check(GroupProgress.eligibleBeneficiaries(members, 0, null, id -> null).size() == 2,
+                "A reset member remains a reward beneficiary when another member completes the new cycle");
         GroupProgress.applyObjective(waiting.objectives.getFirst(), 0, new int[0], members, true, null);
         check(waiting.objectives.getFirst().getDisplayedUnits() == 80
                         && waiting.objectives.getFirst().getDisplayedRequiredAmount() == 128,

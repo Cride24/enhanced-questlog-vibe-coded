@@ -218,7 +218,7 @@ public class QuestDetails extends Screen implements NarrationSupplier {
                     this.getPalette().textColor(),
                     this.getPalette().hoveredTextColor(),
                     Component.empty(),
-                    this::claimAllRewards,
+                    this::handleRewardAction,
                     this.getGuiSet()
             );
             this.updateRewardButton();
@@ -267,7 +267,8 @@ public class QuestDetails extends Screen implements NarrationSupplier {
 
         if (this.proposal) backText = Component.translatable("gui.back");
 
-        if (!this.proposal && this.quest.isActive() && this.quest.isCompleted() && this.quest.isRewarded() && this.quest.isRepeatable()) {
+        if (!this.proposal && this.quest.isActive() && this.quest.hasSentCompletion && this.quest.isRewarded()
+                && !this.quest.hasPendingRewards() && this.quest.isRepeatable()) {
             backText = Component.translatable("questlog.reward.reset");
         } else if (!this.proposal && this.quest.isActive() && this.needsRead()) {
             backText = Component.translatable("questlog.button.read");
@@ -286,15 +287,39 @@ public class QuestDetails extends Screen implements NarrationSupplier {
 
     private boolean shouldShowRewardButton() {
         return !this.proposal && this.quest.isActive() && !this.detailsPage && this.showInfo && !this.quest.rewards.isEmpty()
-                && this.quest.isCompleted() && this.quest.hasPendingRewards();
+                && (this.quest.hasSentCompletion && this.quest.hasPendingRewards() || this.pendingLeadershipReward() != null);
     }
 
     private void updateRewardButton() {
         if (this.rewardButton == null) return;
 
+        net.minecraft.nbt.CompoundTag pending = this.pendingLeadershipReward();
+        if (pending != null) {
+            boolean ready = pending.getInt("state") == org.infernalstudios.questlog.core.GroupRewards.READY;
+            this.rewardButton.active = ready;
+            this.rewardButton.setMessage(Component.translatable(ready
+                    ? pending.getInt("policy") == 1 ? "questlog.reward.lottery" : "questlog.reward.assign"
+                    : "questlog.reward.lottery_running"));
+            this.rewardButton.setX(this.panel2X + this.getDisplay().getRightPanelWidth() - 12 - this.rewardButton.getExpectedWidth());
+            return;
+        }
+
+        int blockedIndex = this.blockingRewardIndex();
+        if (blockedIndex >= 0) {
+            Reward reward = this.quest.rewards.get(blockedIndex);
+            boolean canStart = this.canStartRewardDecision(reward);
+            this.rewardButton.active = canStart;
+            this.rewardButton.setMessage(Component.translatable(canStart
+                    ? reward.allocationPolicy() == 1 ? "questlog.reward.lottery" : "questlog.reward.assign"
+                    : reward.allocationState() == org.infernalstudios.questlog.core.GroupRewards.VOTING
+                    ? "questlog.reward.lottery_running" : "questlog.reward.assignment_pending"));
+            this.rewardButton.setX(this.panel2X + this.getDisplay().getRightPanelWidth() - 12 - this.rewardButton.getExpectedWidth());
+            return;
+        }
+
         boolean canClaim = true;
         for (Reward reward : this.quest.rewards) {
-            if (!reward.hasRewarded() && reward instanceof org.infernalstudios.questlog.core.quests.rewards.ChoiceReward choiceReward && !choiceReward.canClaim()) {
+            if (reward.isEligible() && !reward.hasRewarded() && reward instanceof org.infernalstudios.questlog.core.quests.rewards.ChoiceReward choiceReward && !choiceReward.canClaim()) {
                 canClaim = false;
                 break;
             }
@@ -306,10 +331,101 @@ public class QuestDetails extends Screen implements NarrationSupplier {
         this.rewardButton.setX(this.panel2X + this.getDisplay().getRightPanelWidth() - 12 - this.rewardButton.getExpectedWidth());
     }
 
+    private int blockingRewardIndex() {
+        for (int i = 0; i < this.quest.rewards.size(); i++) {
+            Reward reward = this.quest.rewards.get(i);
+            if (reward.hasRewarded() || !reward.onePerGroup() || reward.allocationId().isEmpty()) continue;
+            if (reward.allocationState() == org.infernalstudios.questlog.core.GroupRewards.VOTING
+                    || reward.allocationState() == org.infernalstudios.questlog.core.GroupRewards.READY
+                    && (reward.allocationPolicy() == 1 || reward.allocationPolicy() == 2)
+                    || reward.allocationState() == org.infernalstudios.questlog.core.GroupRewards.WON
+                    && reward.allocationWinner() != null && this.minecraft != null && this.minecraft.player != null
+                    && !reward.allocationWinner().equals(this.minecraft.player.getUUID())
+                    || reward.allocationState() == org.infernalstudios.questlog.core.GroupRewards.CONSUMED)
+                return i;
+        }
+        return -1;
+    }
+
+    private boolean isGroupLeader() {
+        if (this.minecraft == null || this.minecraft.player == null) return false;
+        net.minecraft.nbt.CompoundTag state = org.infernalstudios.questlog.network.ClientPacketHandler.groupState();
+        String own = state.getString("own");
+        for (net.minecraft.nbt.Tag item : state.getList("groups", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+            net.minecraft.nbt.CompoundTag group = (net.minecraft.nbt.CompoundTag) item;
+            if (own.equals(group.getString("id"))
+                    && this.minecraft.player.getUUID().toString().equals(group.getString("leader"))) return true;
+        }
+        return false;
+    }
+
+    private boolean canStartRewardDecision(Reward reward) {
+        if (reward.allocationState() != org.infernalstudios.questlog.core.GroupRewards.READY) return false;
+        if (this.isGroupLeader()) return reward.allocationPolicy() == 1 || reward.allocationPolicy() == 2;
+        if (reward.allocationPolicy() != 1 || this.minecraft == null || this.minecraft.player == null
+                || !reward.allocationBeneficiaries().contains(this.minecraft.player.getUUID())) return false;
+        net.minecraft.nbt.CompoundTag state = org.infernalstudios.questlog.network.ClientPacketHandler.groupState();
+        String own = state.getString("own");
+        for (net.minecraft.nbt.Tag item : state.getList("groups", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+            net.minecraft.nbt.CompoundTag group = (net.minecraft.nbt.CompoundTag) item;
+            if (!own.equals(group.getString("id")) || own.isEmpty()) continue;
+            String leader = group.getString("leader");
+            for (net.minecraft.nbt.Tag online : group.getList("online", net.minecraft.nbt.Tag.TAG_COMPOUND))
+                if (leader.equals(((net.minecraft.nbt.CompoundTag) online).getString("id"))) return false;
+            return !leader.isEmpty();
+        }
+        return false;
+    }
+
+    private net.minecraft.nbt.CompoundTag pendingLeadershipReward() {
+        if (!this.isGroupLeader()) return null;
+        net.minecraft.nbt.CompoundTag state = org.infernalstudios.questlog.network.ClientPacketHandler.groupState();
+        net.minecraft.nbt.CompoundTag found = null;
+        for (net.minecraft.nbt.Tag item : state.getList("pending_rewards", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+            net.minecraft.nbt.CompoundTag row = (net.minecraft.nbt.CompoundTag) item;
+            if (this.quest.getId().toString().equals(row.getString("quest"))) found = row;
+        }
+        return found;
+    }
+
+    private void handleRewardAction() {
+        net.minecraft.nbt.CompoundTag pending = this.pendingLeadershipReward();
+        if (pending != null && pending.getInt("state") == org.infernalstudios.questlog.core.GroupRewards.READY) {
+            int pendingIndex = pending.getInt("index");
+            if (pending.getInt("policy") == 1) {
+                Services.PLATFORM.sendPacketToServer(new org.infernalstudios.questlog.network.packet.QuestRewardActionPacket(
+                        this.quest.getId(), pendingIndex, pending.getString("allocation"),
+                        org.infernalstudios.questlog.network.packet.QuestRewardActionPacket.START, ""));
+            } else if (this.minecraft != null) {
+                this.minecraft.setScreen(new RewardRecipientScreen(this, this.quest, pendingIndex,
+                        pending.getString("allocation"), pending.getList("beneficiaries", net.minecraft.nbt.Tag.TAG_COMPOUND)));
+            }
+            return;
+        }
+        int index = this.blockingRewardIndex();
+        if (index < 0) { this.claimAllRewards(); return; }
+        Reward reward = this.quest.rewards.get(index);
+        if (!this.canStartRewardDecision(reward)) return;
+        if (reward.allocationPolicy() == 1) {
+            Services.PLATFORM.sendPacketToServer(new org.infernalstudios.questlog.network.packet.QuestRewardActionPacket(
+                    this.quest.getId(), index, reward.allocationId(),
+                    org.infernalstudios.questlog.network.packet.QuestRewardActionPacket.START, ""));
+        } else if (reward.allocationPolicy() == 2 && this.minecraft != null) {
+            net.minecraft.nbt.ListTag beneficiaries = new net.minecraft.nbt.ListTag();
+            for (java.util.UUID id : reward.allocationBeneficiaries()) {
+                net.minecraft.nbt.CompoundTag row = new net.minecraft.nbt.CompoundTag();
+                row.putUUID("id", id); beneficiaries.add(row);
+            }
+            this.minecraft.setScreen(new RewardRecipientScreen(this, this.quest, index,
+                    reward.allocationId(), beneficiaries));
+        }
+    }
+
     private void handlePrimaryAction() {
         if (this.proposal || this.detailsPage) {
             if (this.minecraft != null) this.minecraft.setScreen(this.previousScreen);
-        } else if (this.quest.isActive() && this.quest.isCompleted() && this.quest.isRewarded() && this.quest.isRepeatable()) {
+        } else if (this.quest.isActive() && this.quest.hasSentCompletion && this.quest.isRewarded()
+                && !this.quest.hasPendingRewards() && this.quest.isRepeatable()) {
             Services.PLATFORM.sendPacketToServer(new org.infernalstudios.questlog.network.packet.QuestResetPacket(this.quest.getId()));
         } else if (this.quest.isActive() && this.needsRead()) {
             Services.PLATFORM.sendPacketToServer(new QuestReadPacket(this.quest.getId()));
@@ -322,12 +438,13 @@ public class QuestDetails extends Screen implements NarrationSupplier {
         if (this.proposal) return;
         for (int i = 0; i < this.quest.rewards.size(); i++) {
             Reward reward = this.quest.rewards.get(i);
-            if (!reward.hasRewarded()) {
+            if (reward.isEligible() && !reward.hasRewarded()) {
                 java.util.List<Integer> selections = java.util.Collections.emptyList();
                 if (reward instanceof org.infernalstudios.questlog.core.quests.rewards.ChoiceReward choiceReward) {
                     selections = choiceReward.getSelectedIndicesList();
                 }
-                Services.PLATFORM.sendPacketToServer(new QuestRewardCollectPacket(this.quest.getId(), i, selections));
+                Services.PLATFORM.sendPacketToServer(new QuestRewardCollectPacket(this.quest.getId(), i,
+                        this.quest.rewardCycle(), selections));
                 SoundEvent sound = reward.getDisplay() != null ? reward.getDisplay().getClaimSound() : null;
                 if (sound != null && this.minecraft != null) {
                     this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(sound, 1, 1));
@@ -395,6 +512,18 @@ public class QuestDetails extends Screen implements NarrationSupplier {
         if (this.description != null) this.description.render(ps, mouseX, mouseY, partialTicks);
         if (this.showInfo) {
             this.renderInfo(ps, mouseX, mouseY, partialTicks);
+            if (!this.detailsPage && !this.proposal && this.quest.hasSentCompletion
+                    && !this.quest.hasPendingRewards() && this.pendingLeadershipReward() == null
+                    && this.quest.rewards.stream().noneMatch(reward -> reward instanceof org.infernalstudios.questlog.core.quests.rewards.InformationReward info
+                    && !info.revealed().isBlank())) {
+                Component completed = Component.translatable("questlog.quest.completed");
+                int centerX = this.panel2X + this.getDisplay().getRightPanelWidth() / 2;
+                int centerY = this.panel2Y + this.getDisplay().getPanelHeight() / 2;
+                ps.drawString(this.font, completed, centerX - this.font.width(completed) / 2,
+                        centerY - this.font.lineHeight / 2, this.getPalette().completedTextColor(), false);
+                this.getGuiSet().panelHR.blit(ps,
+                        centerX - this.getGuiSet().panelHR.width() / 2, centerY + this.font.lineHeight);
+            }
         }
 
         this.handleMouseOverLinks(mouseX, mouseY, ps);
@@ -592,7 +721,7 @@ public class QuestDetails extends Screen implements NarrationSupplier {
             this.rebuildWidgets();
         }
 
-        if (this.backButton != null && !this.quest.isCompleted() &&
+        if (this.backButton != null && !this.quest.hasSentCompletion &&
                 this.backButton.getMessage().getString().equals(Component.translatable("questlog.reward.reset").getString())) {
             this.rebuildWidgets();
         }

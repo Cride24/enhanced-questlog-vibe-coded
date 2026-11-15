@@ -36,6 +36,7 @@ public class QuestlogPacketsFabric {
 
         // Register C2S Payloads
         PayloadTypeRegistry.playC2S().register(QuestRewardCollectPacket.TYPE, QuestRewardCollectPacket.STREAM_CODEC);
+        PayloadTypeRegistry.playC2S().register(QuestRewardActionPacket.TYPE, QuestRewardActionPacket.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(QuestReadPacket.TYPE, QuestReadPacket.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(QuestEditSavePacket.TYPE, QuestEditSavePacket.STREAM_CODEC);
         PayloadTypeRegistry.playC2S().register(QuestEditRemovePacket.TYPE, QuestEditRemovePacket.STREAM_CODEC);
@@ -68,6 +69,7 @@ public class QuestlogPacketsFabric {
         ServerPlayNetworking.registerGlobalReceiver(QuestShareActionPacket.TYPE, (payload, context) -> context.server().execute(() -> QuestShareActionPacket.handle(payload, createServerContext(context.player()))));
         ServerPlayNetworking.registerGlobalReceiver(QuestAuthorPacket.TYPE, (payload, context) -> context.server().execute(() -> QuestAuthorPacket.handle(payload, createServerContext(context.player()))));
         ServerPlayNetworking.registerGlobalReceiver(QuestRewardCollectPacket.TYPE, (payload, context) -> context.server().execute(() -> QuestRewardCollectPacket.handle(payload, createServerContext(context.player()))));
+        ServerPlayNetworking.registerGlobalReceiver(QuestRewardActionPacket.TYPE, (payload, context) -> context.server().execute(() -> QuestRewardActionPacket.handle(payload, createServerContext(context.player()))));
         ServerPlayNetworking.registerGlobalReceiver(QuestReadPacket.TYPE, (payload, context) -> context.server().execute(() -> QuestReadPacket.handle(payload, createServerContext(context.player()))));
         ServerPlayNetworking.registerGlobalReceiver(QuestEditSavePacket.TYPE, (payload, context) -> context.server().execute(() -> QuestEditSavePacket.handle(payload, createServerContext(context.player()))));
         ServerPlayNetworking.registerGlobalReceiver(QuestEditRemovePacket.TYPE, (payload, context) -> context.server().execute(() -> QuestEditRemovePacket.handle(payload, createServerContext(context.player()))));

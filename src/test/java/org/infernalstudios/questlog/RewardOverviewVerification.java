@@ -39,8 +39,12 @@ public final class RewardOverviewVerification {
         completed.putInt("units", 1);
         quest.objectives.get(0).deserialize(completed);
         check(quest.isCompleted(), "Test quest is completed");
-        check(defaultInfo.getHeight() == 51, "Completion switches to the original rewards-only panel");
-        check(previewInfo.getHeight() == 51, "Opt-in preview also keeps the original completed panel");
+        quest.hasSentCompletion = true;
+        check(defaultInfo.getHeight() == 51, "Completion shows pending rewards");
+        check(previewInfo.getHeight() == 51, "Opt-in preview also shows pending rewards");
+        quest.rewards.get(0).setRewarded(true);
+        check(defaultInfo.getHeight() == 0 && previewInfo.getHeight() == 0,
+                "Collected rewards leave the panel clear for Completed");
         check(!previewInfo.mouseClicked(0, -1, 0), "Reject negative reward coordinates");
         check(!previewInfo.mouseClicked(0, 500, 0), "Reject coordinates below the list");
         check(!previewInfo.mouseClicked(0, 5, 1), "Right click does not choose a reward");

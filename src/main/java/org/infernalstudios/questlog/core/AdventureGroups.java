@@ -231,6 +231,10 @@ public final class AdventureGroups {
         for (ServerPlayer other : server.getPlayerList().getPlayers()) if (!other.getUUID().equals(player.getUUID())) sync(other, "");
     }
 
+    boolean isOnline(UUID id) {
+        return server != null && server.getPlayerList().getPlayer(id) != null && !disconnecting.contains(id);
+    }
+
     void clearOffers(UUID player) {
         for (Group group : groups.values()) {
             group.applicants.remove(player);
@@ -364,7 +368,7 @@ public final class AdventureGroups {
             row.putBoolean("invited", group.invitations.contains(id));
             ListTag online = new ListTag();
             for (UUID member : group.members.keySet()) {
-                if (server.getPlayerList().getPlayer(member) != null && !disconnecting.contains(member)) {
+                if (isOnline(member)) {
                     CompoundTag marker = new CompoundTag(); marker.putString("id", member.toString()); online.add(marker);
                 }
             }
@@ -373,6 +377,7 @@ public final class AdventureGroups {
         }
         data.put("groups", list);
         if (own != null && own.leader.equals(id)) {
+            if (GroupRewards.INSTANCE != null) data.put("pending_rewards", GroupRewards.INSTANCE.pendingForLeader(own.id));
             List<ServerPlayer> candidates = playerCandidates(viewer, search, true);
             ListTag players = new ListTag();
             for (ServerPlayer candidate : candidates) {

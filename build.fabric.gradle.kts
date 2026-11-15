@@ -35,6 +35,7 @@ val verificationMains = mapOf(
     "verifyAdventureGroups" to "org.infernalstudios.questlog.core.AdventureGroupsVerification",
     "verifyQuestSharing" to "org.infernalstudios.questlog.core.QuestSharingVerification",
     "verifyGroupProgress" to "org.infernalstudios.questlog.core.GroupProgressVerification",
+    "verifyGroupRewards" to "org.infernalstudios.questlog.core.GroupRewardsVerification",
     "verifyImageTooltip" to "org.infernalstudios.questlog.ImageTooltipVerification",
 )
 
@@ -45,6 +46,8 @@ verificationMains.forEach { (name, entrypoint) ->
         mainClass = entrypoint
         if (name == "verifyTrackingValidation")
             systemProperty("questlog.examples", rootProject.file("examples/tracking-validation").absolutePath)
+        if (name == "verifyGroupRewards")
+            systemProperty("questlog.lot5.examples", rootProject.file("examples/lot5-server-test/questlog/quests").absolutePath)
         workingDir = layout.buildDirectory.dir("verification").get().asFile
         doFirst { workingDir.mkdirs() }
     }

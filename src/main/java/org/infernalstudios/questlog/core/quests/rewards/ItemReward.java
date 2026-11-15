@@ -85,6 +85,21 @@ public class ItemReward extends Reward {
     }
 
     @Override
+    public boolean canDeliver(ServerPlayer player) {
+        ItemStack wanted = this.stack.get();
+        if (wanted.isEmpty()) return true;
+        int room = 0;
+        for (int i = 0; i < 36; i++) {
+            ItemStack present = player.getInventory().getItem(i);
+            if (present.isEmpty()) room += wanted.getMaxStackSize();
+            else if (ItemStack.isSameItemSameComponents(present, wanted))
+                room += Math.max(0, Math.min(present.getMaxStackSize(), wanted.getMaxStackSize()) - present.getCount());
+            if (room >= wanted.getCount()) return true;
+        }
+        return false;
+    }
+
+    @Override
     public void applyReward(ServerPlayer player) {
         if (this.getParent() != null && !this.getParent().isActive()) return;
         ItemStack itemStack = this.stack.get();

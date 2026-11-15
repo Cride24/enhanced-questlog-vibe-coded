@@ -174,6 +174,11 @@ public class QuestEditorScreen extends Screen {
     ActiveTab activeTab = ActiveTab.PREREQUISITES;
     NoShadowEditBox entryNameBox;
     NoShadowEditBox entryAmountBox;
+    NoShadowEditBox entryBeneficiaryDistanceBox;
+    Button entryUniqueButton;
+    boolean entryUnique;
+    Button entryReferenceButton;
+    int entryReference = -1;
     NoShadowEditBox entryIconBox;
     Button entryNestedButton;
     Button entryLevelsButton;
@@ -741,6 +746,10 @@ public class QuestEditorScreen extends Screen {
                 this.tempBooleans.put(def.key(), next);
                 if (def.key().equals("group_quest") && !next) {
                     this.tempBooleans.put("per_participant", false);
+                    for (JsonObject reward : this.tempRewards) {
+                        reward.remove("beneficiary_distance");
+                        reward.remove("one_per_group");
+                    }
                     this.rebuildWidgets();
                 }
                 btn.setMessage(Component.literal(label + ": " + (next ? "True" : "False")));
@@ -903,7 +912,7 @@ public class QuestEditorScreen extends Screen {
         } else {
             if (meta == null || meta.targetFieldKey() != null) {
                 this.entryTargetBox = new NoShadowEditBox(this.font, 0, 0, 125, 14, Component.empty());
-                this.entryTargetBox.setMaxLength(128);
+                this.entryTargetBox.setMaxLength("questlog:information".equals(this.editingType) ? 1024 : 128);
                 String targetVal = getTargetFieldValue();
                 this.entryTargetBox.setValue(targetVal);
                 String tooltipKey = (meta != null && "bounds".equals(meta.targetFieldKey())) ? "questlog.editor.tooltip.entry_target.bounds" : "questlog.editor.tooltip.entry_target";
@@ -959,6 +968,34 @@ public class QuestEditorScreen extends Screen {
         String iconVal = getIconFieldValue();
         this.entryIconBox.setValue(iconVal);
         this.entryIconBox.setTooltip(Tooltip.create(Component.translatable("questlog.editor.tooltip.entry_icon")));
+
+        this.entryBeneficiaryDistanceBox = null;
+        this.entryUniqueButton = null;
+        this.entryReferenceButton = null;
+        if (this.activeTab == ActiveTab.REWARDS && this.nestingStack.isEmpty()
+                && this.tempBooleans.getOrDefault("group_quest", false)) {
+            this.entryBeneficiaryDistanceBox = new NoShadowEditBox(this.font, 0, 0, 50, 14, Component.empty());
+            this.entryBeneficiaryDistanceBox.setMaxLength(6);
+            this.entryBeneficiaryDistanceBox.setFilter(s -> s.isEmpty() || s.matches("\\d*"));
+            this.entryBeneficiaryDistanceBox.setValue(this.editingEntry != null
+                    ? QuestDraftFields.text(this.editingEntry, "beneficiary_distance", "0") : "0");
+            this.entryBeneficiaryDistanceBox.setTooltip(Tooltip.create(Component.translatable("questlog.editor.tooltip.beneficiary_distance")));
+            this.entryUnique = this.editingEntry != null && JsonUtils.getOrDefault(this.editingEntry, "one_per_group", false);
+            this.entryUniqueButton = Button.builder(Component.translatable(this.entryUnique
+                    ? "questlog.editor.one_per_group" : "questlog.editor.per_player"), btn -> {
+                this.entryUnique = !this.entryUnique;
+                btn.setMessage(Component.translatable(this.entryUnique
+                        ? "questlog.editor.one_per_group" : "questlog.editor.per_player"));
+            }).size(125, 16).build();
+            this.entryReference = this.editingEntry != null && this.editingEntry.has("reference_objective")
+                    ? this.editingEntry.get("reference_objective").getAsInt() : -1;
+            this.entryReferenceButton = Button.builder(referenceLabel(), btn -> {
+                java.util.List<Integer> valid = referenceObjectives();
+                int position = valid.indexOf(this.entryReference);
+                this.entryReference = valid.isEmpty() || position + 1 >= valid.size() ? -1 : valid.get(position + 1);
+                btn.setMessage(referenceLabel());
+            }).size(125, 16).build();
+        }
 
         ScrollableComponent editEntryScrollable = new ScrollableComponent(panel2X + 10, panel2Y + 28, 140, 130, new EditEntryPanelScrollable(this));
         this.addRenderableWidget(editEntryScrollable);
@@ -1170,6 +1207,7 @@ public class QuestEditorScreen extends Screen {
         String components = this.entryComponentsBox != null ? this.entryComponentsBox.getValue().trim() : "";
         String icon = this.entryIconBox != null ? this.entryIconBox.getValue().trim() : "";
         String amount = this.entryAmountBox == null ? "" : this.entryAmountBox.getValue();
+        String beneficiaryDistance = this.entryBeneficiaryDistanceBox == null ? "" : this.entryBeneficiaryDistanceBox.getValue();
 
         this.editingEntry.addProperty("type", this.editingType);
         if (!name.isEmpty()) {
@@ -1243,6 +1281,14 @@ public class QuestEditorScreen extends Screen {
         for (String k : allKeys) {
             this.editingEntry.remove(k);
         }
+        if (this.entryBeneficiaryDistanceBox != null) {
+            QuestDraftFields.putInteger(this.editingEntry, "beneficiary_distance", beneficiaryDistance);
+            if (this.entryUnique) this.editingEntry.addProperty("one_per_group", true);
+            else this.editingEntry.remove("one_per_group");
+            if (this.entryReference >= 0 && this.entryUnique)
+                this.editingEntry.addProperty("reference_objective", this.entryReference);
+            else this.editingEntry.remove("reference_objective");
+        }
 
         if (!slot.isEmpty()) {
             this.editingEntry.addProperty("slot", slot.toLowerCase(Locale.ROOT));
@@ -1251,7 +1297,7 @@ public class QuestEditorScreen extends Screen {
         EditorMetadata meta = getMetadata(this.editingType);
         if (meta != null) {
             if (meta.targetFieldKey() != null && !target.isEmpty()) {
-                if (target.trim().startsWith("{") && target.trim().endsWith("}")) {
+                if (!"questlog:information".equals(this.editingType) && target.trim().startsWith("{") && target.trim().endsWith("}")) {
                     try {
                         JsonElement parsed = JsonParser.parseString(target);
                         this.editingEntry.add(meta.targetFieldKey(), parsed);
@@ -1282,6 +1328,23 @@ public class QuestEditorScreen extends Screen {
             list.set(this.selectedEntryIndex, this.editingEntry);
         }
         this.updateParentEntryWithChildren();
+    }
+
+    private java.util.List<Integer> referenceObjectives() {
+        java.util.List<Integer> valid = new java.util.ArrayList<>();
+        for (int i = 0; i < this.tempObjectives.size(); i++) {
+            JsonObject objective = this.tempObjectives.get(i);
+            String type = QuestDraftFields.text(objective, "type", "");
+            if (java.util.Set.of("questlog:entity_kill", "questlog:item_craft", "questlog:item_obtain",
+                    "entity_kill", "item_craft", "item_obtain").contains(type)) valid.add(i);
+        }
+        return valid;
+    }
+
+    private Component referenceLabel() {
+        if (this.entryReference < 0 || this.entryReference >= this.tempObjectives.size())
+            return Component.translatable("questlog.editor.reference_auto");
+        return Component.translatable("questlog.editor.reference", this.entryReference + 1);
     }
 
     List<JsonObject> getActiveList() {
@@ -1428,6 +1491,7 @@ public class QuestEditorScreen extends Screen {
         String entrySlot = this.entrySlotBox != null ? this.entrySlotBox.getValue() : null;
         String entryComponents = this.entryComponentsBox != null ? this.entryComponentsBox.getValue() : null;
         String entryAmount = this.entryAmountBox != null ? this.entryAmountBox.getValue() : null;
+        String entryBeneficiaryDistance = this.entryBeneficiaryDistanceBox != null ? this.entryBeneficiaryDistanceBox.getValue() : null;
         String entryIcon = this.entryIconBox != null ? this.entryIconBox.getValue() : null;
 
         super.repositionElements();
@@ -1439,6 +1503,8 @@ public class QuestEditorScreen extends Screen {
             if (this.entryComponentsBox != null && entryComponents != null)
                 this.entryComponentsBox.setValue(entryComponents);
             if (this.entryAmountBox != null && entryAmount != null) this.entryAmountBox.setValue(entryAmount);
+            if (this.entryBeneficiaryDistanceBox != null && entryBeneficiaryDistance != null)
+                this.entryBeneficiaryDistanceBox.setValue(entryBeneficiaryDistance);
             if (this.entryIconBox != null && entryIcon != null) this.entryIconBox.setValue(entryIcon);
         }
     }

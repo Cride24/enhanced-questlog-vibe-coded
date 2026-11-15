@@ -52,6 +52,36 @@ public final class QuestValidation {
                 "prerequisites", references, issues, 0);
         entries(definition, "failures", false, "failures", references, issues, 0);
         entries(definition, "rewards", true, "rewards", references, issues, 0);
+        if (!definition.has("group_quest") || !definition.get("group_quest").isJsonPrimitive()
+                || !definition.getAsJsonPrimitive("group_quest").isBoolean() || !definition.get("group_quest").getAsBoolean()) {
+            JsonArray rewards = definition.has("rewards") && definition.get("rewards").isJsonArray()
+                    ? definition.getAsJsonArray("rewards") : new JsonArray();
+            for (int i = 0; i < rewards.size(); i++) if (rewards.get(i).isJsonObject()) {
+                JsonObject reward = rewards.get(i).getAsJsonObject();
+                if (reward.has("beneficiary_distance") || reward.has("one_per_group")
+                        || reward.has("reference_objective"))
+                    issues.add(new Issue("rewards[" + i + "]", "questlog.validation.group_required", true));
+            }
+        }
+        JsonArray rewards = definition.has("rewards") && definition.get("rewards").isJsonArray()
+                ? definition.getAsJsonArray("rewards") : new JsonArray();
+        JsonArray objectives = definition.has("objectives") && definition.get("objectives").isJsonArray()
+                ? definition.getAsJsonArray("objectives") : new JsonArray();
+        for (int i = 0; i < rewards.size(); i++) if (rewards.get(i).isJsonObject()) {
+            JsonObject reward = rewards.get(i).getAsJsonObject();
+            if (!reward.has("reference_objective")) continue;
+            try {
+                int reference = reward.get("reference_objective").getAsInt();
+                if (!reward.has("one_per_group") || !reward.get("one_per_group").getAsBoolean()
+                        || reference < 0 || reference >= objectives.size() || !objectives.get(reference).isJsonObject()
+                        || !java.util.Set.of("questlog:entity_kill", "questlog:item_craft", "questlog:item_obtain",
+                        "entity_kill", "item_craft", "item_obtain").contains(
+                        string(objectives.get(reference).getAsJsonObject().get("type"))))
+                    issues.add(new Issue("rewards[" + i + "].reference_objective", "questlog.validation.reference", true));
+            } catch (RuntimeException malformed) {
+                issues.add(new Issue("rewards[" + i + "].reference_objective", "questlog.validation.reference", true));
+            }
+        }
         return new Report(issues);
     }
 
@@ -110,6 +140,8 @@ public final class QuestValidation {
             issues.add(new Issue(field(path, "type"), type == null || type.isBlank() ? "questlog.validation.required" : "questlog.validation.type", true));
             return;
         }
+        if (reward && depth > 1 && id.getPath().equals("information"))
+            issues.add(new Issue(path, "questlog.validation.nested_information", true));
         EditorMetadata meta = reward ? QuestRewardRegistry.getMetadata(id) : QuestObjectiveRegistry.getMetadata(id);
         if (meta != null) {
             String target = meta.targetFieldKey();
@@ -131,6 +163,14 @@ public final class QuestValidation {
             }
         }
         bool(value, "auto_claim", field(path, "auto_claim"), issues);
+        if (reward) {
+            number(value, "beneficiary_distance", field(path, "beneficiary_distance"), false, 0, issues);
+            bool(value, "one_per_group", field(path, "one_per_group"), issues);
+            number(value, "reference_objective", field(path, "reference_objective"), false, 0, issues);
+            if (depth > 1 && (value.has("beneficiary_distance") || value.has("one_per_group")
+                    || value.has("reference_objective")))
+                issues.add(new Issue(path, "questlog.validation.group_required", true));
+        }
         bool(value, "levels", field(path, "levels"), issues);
         bool(value, "retroactive", field(path, "retroactive"), issues);
         if (!reward && List.of("and", "or").contains(id.getPath())) entries(value, "objectives", false, field(path, "objectives"), refs, issues, depth);

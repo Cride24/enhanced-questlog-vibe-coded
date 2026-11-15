@@ -6,6 +6,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
@@ -222,6 +223,20 @@ public class ServerPlayerManager {
         }
 
         this.syncPlayer(questManager);
+        announceUnseenGlobalCompletions(questManager, globalData);
+    }
+
+    private void announceUnseenGlobalCompletions(QuestManager manager, CompoundTag globalData) {
+        List<Quest> unseen = manager.getAllQuests().stream().filter(quest -> quest.isActive() && quest.isGlobal()
+                && !quest.ignoresGlobalCompletion()
+                && quest.hasSentCompletion && !quest.globalCompletionNoticeSeen()
+                && globalData.getCompound(quest.getId().toString()).getBoolean("completed")).toList();
+        if (unseen.isEmpty()) return;
+        unseen.forEach(Quest::markGlobalCompletionNoticeSeen);
+        if (save(manager)) for (Quest quest : unseen) {
+            manager.player.sendSystemMessage(Component.translatable("questlog.global.completed",
+                    quest.getDisplay().getTitle()));
+        }
     }
 
     private boolean isSyncingGlobal = false;
@@ -305,7 +320,10 @@ public class ServerPlayerManager {
                 if (q != null && manager.isLoaded() && !q.ignoresGlobalCompletion()) {
                     if (q != sourceQuest && !q.hasSentCompletion) q.grantGlobalCompletion();
                     manager.sync(id);
-                    this.save(manager);
+                    boolean notify = q.isActive() && !q.globalCompletionNoticeSeen();
+                    if (notify) q.markGlobalCompletionNoticeSeen();
+                    if (this.save(manager) && notify) player.sendSystemMessage(
+                            Component.translatable("questlog.global.completed", q.getDisplay().getTitle()));
                 }
             }
         } finally {
@@ -398,6 +416,7 @@ public class ServerPlayerManager {
             globalTag.remove(questId.toString());
             if (!saveGlobalData(globalTag)) return -1;
         }
+        if (GroupRewards.INSTANCE != null && !GroupRewards.INSTANCE.cancelPendingForQuest(questId)) return -1;
         return count;
     }
 
@@ -438,10 +457,12 @@ public class ServerPlayerManager {
             Map<ResourceLocation, String> definitions = new HashMap<>();
             Map<ResourceLocation, String> chapterDefinitions = new HashMap<>();
             Map<ResourceLocation, CompoundTag> data = new HashMap<>();
+            boolean authorMode = QuestSharing.canSeeAllDefinitions(serverPlayer, questManager);
 
             for (Quest quest : questManager.getAllQuests()) {
-                if (!QuestSharing.maySendDefinition(quest, QuestSharing.canSeeAllDefinitions(serverPlayer, questManager))) continue;
-                definitions.put(quest.getId(), DefinitionUtil.getCachedQuest(quest.getId()).toString());
+                if (!QuestSharing.maySendDefinition(quest, authorMode)) continue;
+                definitions.put(quest.getId(), QuestSharing.visibleDefinition(
+                        DefinitionUtil.getCachedQuest(quest.getId()), authorMode).toString());
                 data.put(quest.getId(), quest.serialize());
             }
 

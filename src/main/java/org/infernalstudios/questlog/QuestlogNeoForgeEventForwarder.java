@@ -12,6 +12,20 @@ import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 
 public class QuestlogNeoForgeEventForwarder {
     @SubscribeEvent
+    public static void onServerTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+        QuestlogEvents.onServerTick();
+    }
+    @SubscribeEvent
+    public static void onDamage(net.neoforged.neoforge.event.entity.living.LivingDamageEvent.Post event) {
+        org.infernalstudios.questlog.core.CombatContributions.damage(event.getEntity(), event.getSource(), event.getNewDamage());
+    }
+
+    @SubscribeEvent
+    public static void onEntityLeave(net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent event) {
+        if (event.getEntity() instanceof net.minecraft.world.entity.LivingEntity living)
+            org.infernalstudios.questlog.core.CombatContributions.forget(living);
+    }
+    @SubscribeEvent
     public static void onServerStart(ServerStartingEvent event) {
         QuestlogEvents.onServerStart(event.getServer());
     }

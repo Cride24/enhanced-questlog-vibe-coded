@@ -60,6 +60,11 @@ public class EditEntryPanelScrollable implements Scrollable, GuiEventListener, N
         if (screen.entryAmountBox != null) {
             rows.add(new EntryRow(Component.literal(screen.getAmountFieldLabel()), screen.entryAmountBox, screen.entryLevelsButton));
         }
+        if (screen.entryBeneficiaryDistanceBox != null) {
+            rows.add(new EntryRow(Component.translatable("questlog.editor.beneficiary_distance"), screen.entryBeneficiaryDistanceBox));
+            rows.add(new EntryRow(null, screen.entryUniqueButton));
+            rows.add(new EntryRow(null, screen.entryReferenceButton));
+        }
         if (screen.entryIconBox != null) {
             rows.add(new EntryRow(Component.literal("Icon:"), screen.entryIconBox));
         }

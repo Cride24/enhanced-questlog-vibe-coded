@@ -1,0 +1,14 @@
+{
+  "title": "03 — Loterie du groupe",
+  "description": "Régler la politique du groupe sur Loterie, fabriquer les torches, lancer le vote puis répondre Oui ou Non.",
+  "chapter": "questlog:main",
+  "sort_order": 30,
+  "icon": { "item": "minecraft:torch" },
+  "group_quest": true,
+  "objectives": [{ "type": "questlog:item_craft", "item": "minecraft:torch", "required_amount": 5, "name": "Fabriquer 5 torches ensemble" }],
+  "rewards": [{
+    "type": "questlog:item", "item": "minecraft:diamond", "count": 1,
+    "one_per_group": true, "beneficiary_distance": 16,
+    "name": "Diamant tiré au sort"
+  }]
+}

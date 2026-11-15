@@ -32,6 +32,104 @@ public final class GroupProgress {
 
     record Participant(UUID id, Quest online, CompoundTag saved, boolean resetPending) {}
 
+    public static boolean eligibleCombatParticipant(Quest source, UUID id) {
+        ServerPlayerManager players = ServerPlayerManager.INSTANCE;
+        if (players == null || AdventureGroups.INSTANCE == null || source == null) return false;
+        AdventureGroups.Group group = AdventureGroups.INSTANCE.membership(source.manager.player.getUUID());
+        if (group == null ? !id.equals(source.manager.player.getUUID()) : !group.members.containsKey(id)) return false;
+        ServerPlayer player = players.server().getPlayerList().getPlayer(id);
+        if (player != null) {
+            QuestManager manager = players.getManagerIfPresent(player);
+            Quest quest = manager == null || !manager.isLoaded() ? null : manager.getQuest(source.getId());
+            return quest != null && quest.isActive() && quest.isVisibleToPlayer()
+                    && !quest.hasSentCompletion && !quest.isFailed();
+        }
+        CompoundTag all = ServerPlayerManager.readPlayerData(players.server().getWorldPath(LevelResource.PLAYER_DATA_DIR), id);
+        return all != null && eligibleOffline(source, all.getCompound(source.getId().toString()),
+                source.isGlobal() && players.isGloballyCompleted(source.getId()));
+    }
+
+    public static String combatCycle(Quest source, UUID id) {
+        if (!eligibleCombatParticipant(source, id)) return null;
+        ServerPlayerManager players = ServerPlayerManager.INSTANCE;
+        ServerPlayer player = players.server().getPlayerList().getPlayer(id);
+        if (player != null) {
+            QuestManager manager = players.getManagerIfPresent(player);
+            Quest quest = manager == null ? null : manager.getQuest(source.getId());
+            return quest == null ? null : quest.rewardCycle();
+        }
+        CompoundTag all = ServerPlayerManager.readPlayerData(players.server().getWorldPath(LevelResource.PLAYER_DATA_DIR), id);
+        return all == null ? null : all.getCompound(source.getId().toString()).getString("reward_cycle");
+    }
+
+    public static String objectivePath(Quest source, Objective target) {
+        for (int i = 0; i < source.objectives.size(); i++) {
+            String path = objectivePath(source.objectives.get(i), target, Integer.toString(i));
+            if (path != null) return path;
+        }
+        return null;
+    }
+
+    private static String objectivePath(Objective root, Objective target, String path) {
+        if (root == target) return path;
+        for (int i = 0; i < root.getChildren().size(); i++) {
+            String found = objectivePath(root.getChildren().get(i), target, path + "." + i);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    public static boolean addOfflineKill(Quest source, UUID id, String path) {
+        ServerPlayerManager players = ServerPlayerManager.INSTANCE;
+        if (players == null || path == null || !eligibleCombatParticipant(source, id)) return false;
+        Path dir = players.server().getWorldPath(LevelResource.PLAYER_DATA_DIR);
+        CompoundTag all = ServerPlayerManager.readPlayerData(dir, id);
+        if (all == null) return false;
+        CompoundTag quest = all.getCompound(source.getId().toString());
+        String[] steps = path.split("\\.");
+        int index = Integer.parseInt(steps[0]);
+        var objectives = quest.getList("objectives", Tag.TAG_COMPOUND);
+        if (index >= objectives.size()) return false;
+        CompoundTag node = objectives.getCompound(index);
+        for (int i = 1; i < steps.length; i++) {
+            int child = Integer.parseInt(steps[i]);
+            if (node.contains("child", Tag.TAG_COMPOUND)) node = node.getCompound("child");
+            else {
+                var children = node.getList("children", Tag.TAG_COMPOUND);
+                if (child >= children.size()) return false;
+                node = children.getCompound(child);
+            }
+        }
+        node.putInt("units", Math.min(Integer.MAX_VALUE, node.getInt("units") + 1));
+        quest.putBoolean("group_reset_pending", false);
+        return ServerPlayerManager.writePlayerData(dir, id, all);
+    }
+
+    public static void noteCombatReference(Quest source, String path, List<UUID> best) {
+        ServerPlayerManager players = ServerPlayerManager.INSTANCE;
+        if (players == null || AdventureGroups.INSTANCE == null || path == null) return;
+        AdventureGroups.Group group = AdventureGroups.INSTANCE.membership(source.manager.player.getUUID());
+        Set<UUID> members = group == null ? Set.of(source.manager.player.getUUID()) : group.members.keySet();
+        Path dir = players.server().getWorldPath(LevelResource.PLAYER_DATA_DIR);
+        net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
+        for (UUID id : best) { CompoundTag row = new CompoundTag(); row.putUUID("id", id); list.add(row); }
+        for (UUID member : members) {
+            if (!eligibleCombatParticipant(source, member)) continue;
+            ServerPlayer player = players.server().getPlayerList().getPlayer(member);
+            QuestManager manager = player == null ? null : players.getManagerIfPresent(player);
+            Quest quest = manager == null ? null : manager.getQuest(source.getId());
+            if (quest != null) quest.setCombatReference(path, best);
+            else if (player == null) {
+                CompoundTag all = ServerPlayerManager.readPlayerData(dir, member);
+                if (all == null) continue;
+                CompoundTag saved = all.getCompound(source.getId().toString());
+                saved.putString("combat_reference_path", path);
+                saved.put("combat_reference", list.copy());
+                ServerPlayerManager.writePlayerData(dir, member, all);
+            }
+        }
+    }
+
     public static boolean refresh(Quest source) {
         ServerPlayerManager players = ServerPlayerManager.INSTANCE;
         if (source == null || !source.isGroupQuest() || source.manager.isClient() || players == null
@@ -191,25 +289,117 @@ public final class GroupProgress {
 
     private static void complete(List<Participant> people, Quest source, ServerPlayerManager players, Path dir) {
         if (people.stream().allMatch(Participant::resetPending)) return;
+        UUID sourceId = source.manager.player.getUUID();
+        ServerPlayer validator = people.stream().anyMatch(person -> person.id.equals(sourceId) && !person.resetPending)
+                && source.manager.player instanceof ServerPlayer player ? player
+                : people.stream().filter(person -> !person.resetPending && person.online != null)
+                .map(person -> players.server().getPlayerList().getPlayer(person.id)).filter(java.util.Objects::nonNull)
+                .findFirst().orElse(null);
+        String cycle = UUID.randomUUID().toString();
+        AdventureGroups.Group group = AdventureGroups.INSTANCE.membership(source.manager.player.getUUID());
+        UUID groupId = group == null ? source.manager.player.getUUID() : group.id;
+        int policy = group == null ? 0 : group.lootPolicy;
+        String[] allocations = new String[source.rewards.size()];
+        if (GroupRewards.INSTANCE == null) return;
+        for (int i = 0; i < source.rewards.size(); i++) {
+            var reward = source.rewards.get(i);
+            int distance = reward.beneficiaryDistance();
+            Set<UUID> beneficiaries = eligibleBeneficiaries(people, distance, validator,
+                    id -> players.server().getPlayerList().getPlayer(id));
+            for (Participant person : people) {
+                boolean eligible = beneficiaries.contains(person.id);
+                if (person.online != null) person.online.rewards.get(i).setEligible(eligible);
+                else if (person.saved != null) {
+                    CompoundTag saved = person.saved.getCompound(source.getId().toString());
+                    var rewards = saved.getList("rewards", Tag.TAG_COMPOUND);
+                    if (i < rewards.size()) rewards.getCompound(i).putBoolean("eligible", eligible);
+                }
+            }
+            if (reward.onePerGroup() && !beneficiaries.isEmpty()) {
+                source.setRewardCycle(cycle);
+                List<UUID> best = referencePlayers(source, reward.referenceObjective(), people, beneficiaries, players);
+                UUID reference = best.isEmpty() ? validator == null ? null : validator.getUUID() : best.getFirst();
+                allocations[i] = GroupRewards.INSTANCE.create(source, i, groupId, policy, beneficiaries,
+                        reference, new LinkedHashSet<>(best));
+                if (allocations[i] == null) return;
+            }
+        }
         for (Participant person : people) {
-            if (person.online != null || person.resetPending) continue;
+            if (person.online != null) {
+                person.online.setRewardCycle(cycle);
+                for (int i = 0; i < allocations.length; i++)
+                    if (allocations[i] != null) person.online.rewards.get(i).setAllocationId(allocations[i]);
+            } else if (person.saved != null) {
+                CompoundTag saved = person.saved.getCompound(source.getId().toString());
+                saved.putString("reward_cycle", cycle);
+                var rewards = saved.getList("rewards", Tag.TAG_COMPOUND);
+                for (int i = 0; i < allocations.length && i < rewards.size(); i++)
+                    if (allocations[i] != null) rewards.getCompound(i).putString("allocation_id", allocations[i]);
+            }
+        }
+        for (Participant person : people) {
+            if (person.online != null) continue;
             CompoundTag saved = person.saved.getCompound(source.getId().toString());
             saved.putBoolean("completed", true);
             person.saved.put(source.getId().toString(), saved);
             if (!ServerPlayerManager.writePlayerData(dir, person.id, person.saved)) return;
         }
         for (Participant person : people) {
-            if (person.online != null && !person.resetPending) {
+            if (person.online != null) {
                 person.online.hasSentCompletion = true;
+                GroupRewards.INSTANCE.reconcile(person.online);
                 players.save(person.online.manager);
             }
         }
         for (Participant person : people) {
-            if (person.online == null || person.resetPending) continue;
+            if (person.online == null) continue;
             QuestlogEvents.onQuestCompleted(new QuestEvent.Completed(person.online.manager.player, person.online, true));
             players.save(person.online.manager);
         }
+        if (group != null) {
+            ServerPlayer leader = players.server().getPlayerList().getPlayer(group.leader);
+            if (leader != null) AdventureGroups.INSTANCE.sync(leader, "");
+        }
         if (source.isGlobal()) players.onGlobalQuestUpdated(source);
+    }
+
+    static Set<UUID> eligibleBeneficiaries(List<Participant> people, int distance, ServerPlayer validator,
+                                            java.util.function.Function<UUID, ServerPlayer> online) {
+        Set<UUID> ids = new LinkedHashSet<>();
+        for (Participant person : people) {
+            ServerPlayer recipient = distance == 0 ? null : online.apply(person.id);
+            if (distance == 0 || validator != null && recipient != null
+                    && recipient.level() == validator.level()
+                    && recipient.distanceToSqr(validator) <= (double) distance * distance) ids.add(person.id);
+        }
+        return ids;
+    }
+
+    private static List<UUID> referencePlayers(Quest source, int index, List<Participant> people,
+                                                Set<UUID> beneficiaries, ServerPlayerManager players) {
+        if (index < 0 || index >= source.objectives.size()) return List.of();
+        Objective objective = source.objectives.get(index);
+        if (objective instanceof org.infernalstudios.questlog.core.quests.objectives.entity.EntityKillObjective)
+            return source.combatReference(Integer.toString(index)).stream().filter(beneficiaries::contains).toList();
+        if (!(objective instanceof org.infernalstudios.questlog.core.quests.objectives.item.ItemCraftObjective)
+                && !(objective instanceof ItemObtainObjective)) return List.of();
+        long best = 0;
+        List<UUID> tied = new ArrayList<>();
+        for (Participant person : people) {
+            if (!beneficiaries.contains(person.id)) continue;
+            long amount;
+            if (objective instanceof ItemObtainObjective obtain) {
+                ServerPlayer player = players.server().getPlayerList().getPlayer(person.id);
+                amount = player == null ? obtain.countOfflineInventory(players.server(), person.id) : obtain.countInventory(player);
+            } else {
+                amount = person.online == null
+                        ? savedObjective(person.saved.getCompound(source.getId().toString()), index, new int[0]).getInt("units")
+                        : person.online.objectives.get(index).getPersonalUnits();
+            }
+            if (amount > best) { best = amount; tied.clear(); tied.add(person.id); }
+            else if (amount == best && amount > 0) tied.add(person.id);
+        }
+        return tied;
     }
 
     public static void refreshAll() {

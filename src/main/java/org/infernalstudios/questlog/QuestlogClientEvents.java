@@ -35,6 +35,8 @@ public class QuestlogClientEvents {
         }
 
         Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player != null)
+            org.infernalstudios.questlog.client.gui.screen.LotteryScreen.offer(minecraft.screen);
 
         while (QuestlogClient.OPEN_SCREEN_KEY.consumeClick()) {
             if (minecraft.isWindowActive()) {
@@ -64,6 +66,7 @@ public class QuestlogClientEvents {
         QuestToastState.queuedPopups.clear();
         mostRecentNotificationQuest = null;
         QuestlogScreen.clearScrollPositions();
+        org.infernalstudios.questlog.client.gui.screen.LotteryScreen.clearSession();
     }
 
     public static void onQuestTriggered(QuestEvent.Triggered event) {

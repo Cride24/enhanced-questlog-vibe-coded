@@ -1,0 +1,14 @@
+{
+  "title": "04 — Attribution par le chef",
+  "description": "Régler la politique du groupe sur Attribution, fabriquer les boutons puis désigner un bénéficiaire admissible.",
+  "chapter": "questlog:main",
+  "sort_order": 40,
+  "icon": { "item": "minecraft:oak_button" },
+  "group_quest": true,
+  "objectives": [{ "type": "questlog:item_craft", "item": "minecraft:oak_button", "required_amount": 5, "name": "Fabriquer 5 boutons de chêne ensemble" }],
+  "rewards": [{
+    "type": "questlog:information", "name": "Cachette du groupe",
+    "information": "Dans l'Overworld : X -80, Y 70, Z 160. Le coffre se trouve sous le chêne.",
+    "one_per_group": true
+  }]
+}

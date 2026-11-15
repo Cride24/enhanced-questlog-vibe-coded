@@ -30,6 +30,8 @@ public class QuestRewardRegistry {
                 new EditorMetadata(null, null, null));
         register(Questlog.id("questlog", "random"), RandomReward::new,
                 new EditorMetadata(null, null, "roll_count"));
+        register(Questlog.id("questlog", "information"), InformationReward::new,
+                new EditorMetadata("information", "Information:", null));
     }
 
     public static Set<ResourceLocation> getRegisteredTypes() {

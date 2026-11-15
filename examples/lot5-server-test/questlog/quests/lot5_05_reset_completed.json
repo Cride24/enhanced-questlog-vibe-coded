@@ -1,0 +1,10 @@
+{
+  "title": "05 — Terminée et nouveau cycle",
+  "description": "Terminer sans récompense, vérifier Terminée, réinitialiser puis vérifier le retour de l'objectif.",
+  "chapter": "questlog:main",
+  "sort_order": 50,
+  "icon": { "item": "minecraft:paper" },
+  "repeatable": true,
+  "objectives": [{ "type": "questlog:item_craft", "item": "minecraft:paper", "required_amount": 6, "name": "Fabriquer 6 papiers" }],
+  "rewards": []
+}
