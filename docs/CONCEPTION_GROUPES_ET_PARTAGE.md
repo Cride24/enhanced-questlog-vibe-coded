@@ -184,7 +184,11 @@ Les coordonnées écrites dans ce texte sont renseignées par l'auteur. La captu
 
 ### Bénéficiaires
 
-Chaque récompense a ses propres destinataires. Pour une récompense de groupe :
+Chaque récompense a ses propres destinataires, choisis par l'auteur : joueur, groupe ou tous les joueurs du serveur. La portée serveur est à réaliser dans le lot 6 et doit être disponible pour tous les types de récompenses, pas seulement Information. Elle est indépendante de l'option « Accomplissement mondial » : valider une quête pour tous ne distribue pas automatiquement ses récompenses à tous, et attribuer une récompense à tous ne valide pas leurs autres quêtes.
+
+La portée serveur inclut les joueurs déjà connus du serveur qui sont déconnectés ; leurs droits doivent être conservés pour récupération ultérieure. Le traitement des joueurs qui arrivent pour la première fois après l'attribution reste à préciser, indépendamment de l'héritage de validation mondiale déjà retenu.
+
+Pour une récompense de groupe :
 
 | Distance | Bénéficiaires |
 | --- | --- |
@@ -327,9 +331,9 @@ Le chef reçoit des notifications privées pour les nouvelles candidatures, leur
 
 Utiliser ce document comme référence commune aux discussions de réalisation. Chaque lot comprend l'adaptation de l'interface au design actuel, la conservation des données et des vérifications ciblées.
 
-Au 18 octobre 2026, les lots 1, 2 et 3 sont validés par l'utilisateur. Les réalisations, vérifications et limites sont consignées dans [LOT_1_PROGRESSION_ET_RESET.md](LOT_1_PROGRESSION_ET_RESET.md), [LOT_2_GROUPES_ET_INTERFACE.md](LOT_2_GROUPES_ET_INTERFACE.md) et [LOT_3_PARTAGE_ET_JOURNAL.md](LOT_3_PARTAGE_ET_JOURNAL.md). Les essais rapportés concernent NeoForge ; Fabric reste à tester en jeu, ainsi que le tri de plusieurs groupes avec au moins un troisième joueur. La validation utilisateur ne signifie pas que chaque scénario des protocoles a été exécuté.
+Au 15 novembre 2026, les lots 1 à 5 sont réalisés. Les validations et limites sont consignées dans [LOT_1_PROGRESSION_ET_RESET.md](LOT_1_PROGRESSION_ET_RESET.md), [LOT_2_GROUPES_ET_INTERFACE.md](LOT_2_GROUPES_ET_INTERFACE.md), [LOT_3_PARTAGE_ET_JOURNAL.md](LOT_3_PARTAGE_ET_JOURNAL.md), [LOT_4_PROGRESSION_COLLECTIVE_ET_SUIVI.md](LOT_4_PROGRESSION_COLLECTIVE_ET_SUIVI.md) et [LOT_5_COMBAT_RECOMPENSES.md](LOT_5_COMBAT_RECOMPENSES.md). L'intégration amont est décrite dans [INTEGRATION_AMONT_3_5_4.md](INTEGRATION_AMONT_3_5_4.md). Le lot 5 est validé par l'utilisateur après essais NeoForge à deux joueurs et dernier ajustement demandé. Fabric reste à tester en jeu, ainsi que le tri de plusieurs groupes avec au moins un troisième joueur. La validation utilisateur ne signifie pas que chaque scénario des protocoles a été exécuté.
 
-Le prochain lot est le lot 4, « Participants et progression », incluant l'affichage des objectifs de la première quête suivie. Son développement est autorisé dans une discussion séparée sur la branche `codex/questlog-groupes-et-partage-1.21.1`, à partir du commit publiant cette mise à jour de conception.
+Le prochain lot est le lot 6, « Accomplissements mondiaux, annonces et récompenses à portée serveur », autorisé dans une discussion séparée sur la branche `codex/questlog-groupes-et-partage-1.21.1`, à partir du commit publiant cette mise à jour de conception. Réutiliser les notifications mondiales du lot 5 pour éviter les doublons. Le nommage demandé est `questlog-neoforge-1.21.1-3.5.1-lot6.0.jar`, puis `lot6.1`, etc. Ce nommage ne retire aucune correction ni fonctionnalité de la base intégrée 3.5.4.
 
 Les domaines de travail sont : groupes et interface, partage et journal, objectifs et progression, récompenses, références de chat, accomplissement mondial et annonces. Leur ordre technique dépend des mécanismes existants à réutiliser.
 
